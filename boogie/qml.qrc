@@ -1,5 +1,8 @@
 <RCC>
     <qresource prefix="/">
         <file>main.qml</file>
+        <file>FirstPage.qml</file>
+        <file>ContactPage.qml</file>
+        <file>ConversationPage.qml</file>
     </qresource>
 </RCC>
