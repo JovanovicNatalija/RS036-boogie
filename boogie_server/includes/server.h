@@ -7,13 +7,17 @@ class server : public QTcpServer
 {
 	Q_OBJECT
 public:
-	server();
+	server(qint16 port);
 
 public slots:
 	void newConnection();
+	void userDisconnected();
+	void readMessage();
 
 private:
 	int m_numOfUsers;
+	QTcpSocket *client;
+	QVector<QTcpSocket*> m_users;
 };
 
 #endif // SERVER_H
