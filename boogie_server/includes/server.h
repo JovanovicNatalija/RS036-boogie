@@ -7,7 +7,7 @@ class server : public QTcpServer
 {
 	Q_OBJECT
 public:
-	server(qint16 port);
+	server(quint16 port);
 
 public slots:
 	void newConnection();
