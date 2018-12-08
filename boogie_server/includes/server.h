@@ -7,7 +7,7 @@ class server : public QTcpServer
 {
 	Q_OBJECT
 public:
-	server(qint16 port);
+	server(quint16 port);
 
 public slots:
 	void newConnection();
@@ -15,9 +15,11 @@ public slots:
 	void readMessage();
 
 private:
-	int m_numOfUsers;
-	QTcpSocket *client;
+	//QTcpSocket *client;
 	QVector<QTcpSocket*> m_users;
+
+signals:
+	void serverError();
 };
 
 #endif // SERVER_H
