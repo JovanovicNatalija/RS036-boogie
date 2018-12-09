@@ -2,6 +2,7 @@ import QtQuick 2.6
 import QtQuick.Controls 2.1
 
 Page {
+
     id: root
     header: ToolBar {
         Label {
@@ -23,7 +24,9 @@ Page {
         delegate: ItemDelegate {
             text: modelData
             width: listView.width - listView.leftMargin - listView.rightMargin
-            onClicked: root.StackView.view.push("qrc:/ConversationPage.qml", { inConversationWith: modelData })
+            onClicked: {
+                root.StackView.view.push("qrc:/ConversationPage.qml", { inConversationWith: modelData })
+            }
         }
 
     }

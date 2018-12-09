@@ -50,6 +50,9 @@ Page {
                     id: confirmButton
                     text: qsTr("Confirm")
                     enabled: messageField.length > 0
+                    onClicked: {
+                        client.sendMsg(messageField.text)
+                    }
                 }
             }
         }
