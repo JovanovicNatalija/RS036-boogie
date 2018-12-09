@@ -7,7 +7,10 @@ class client : public QTcpSocket
 {
     Q_OBJECT
 public:
-    client(QString ip, QObject* parrent = nullptr, quint16 port = 10000);
+    client(QObject* parent = nullptr);
+    Q_INVOKABLE void connectToServer(QString ip, quint16 port = 10000);
+    Q_INVOKABLE void sendMsg(QString str);
+    void disconnectFromServer();
 
 public slots:
     void readMsg();

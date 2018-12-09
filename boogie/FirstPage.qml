@@ -3,14 +3,16 @@ import QtQuick.Controls 2.1
 import QtQuick.Layouts 1.3
 import QtQuick.Controls.Material 2.1
 
-
 Page {
     id: root
     property string server_ip_address
-    signal connectToServer(string ip);
+
+    signal connectToServer(string ip)
+
     onConnectToServer:{
         console.log("poslata ip adresa " + ip )
     }
+
 
     header: ToolBar {
         Label {
@@ -43,7 +45,7 @@ Page {
                     enabled: ipField.length > 0
                     onClicked: {
                         root.StackView.view.push("qrc:/ContactPage.qml");
-                        root.connectToServer(ipField.text);
+                        client.connectToServer(ipField.text)
                     }
                 }
             }

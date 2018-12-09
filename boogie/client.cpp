@@ -1,17 +1,32 @@
 #include "client.h"
+#include <iostream>
 
-client::client(QString ip, QObject* parrent, quint16 port)
+client::client(QObject* parrent)
     :QTcpSocket(parrent)
 {
-    connectToHost(ip, port);
-    // TEST IP ADDR TELEFONA 77.243.27.69
+    std::cout << "Client created" << std::endl;
+}
 
-    connect(this, &client::readyRead, this, &client::readMsg);
-    qDebug("Client created");
+void client::connectToServer(QString ip, quint16 port) {
+    connectToHost(ip, port);
+
+    connect(this, SIGNAL(readyRead()), this, SLOT(readMsg()));
+
+    std::cout << "Connected to host" << std::endl;
 }
 
 void client::readMsg(){
-    qDebug() << "poy";
+    std::cout << "read msg:" << std::endl;
+    std::cout << readAll().toStdString() << std::endl;
+}
+
+void client::disconnectFromServer() {
+    disconnectFromHost();
+    std::cout << "Disconected from host" << std::endl;
+}
+
+void client::sendMsg(QString str) {
+    write(str.toLocal8Bit().data());
 }
 
 
