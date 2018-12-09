@@ -10,6 +10,7 @@ Page {
             anchors.centerIn: parent
         }
     }
+
     ListView{
         id: listView
         anchors.fill: parent
@@ -22,9 +23,7 @@ Page {
         delegate: ItemDelegate {
             text: modelData
             width: listView.width - listView.leftMargin - listView.rightMargin
-            //height: avatar.implicitHeight
-            //leftPadding: avatar.implicitHeight + 32
-            onClicked: root.StackView.view.push("qrc:/ConversationPage.qml", {inConversationWith : modelData})
+            onClicked: root.StackView.view.push("qrc:/ConversationPage.qml", { inConversationWith: modelData })
         }
 
     }

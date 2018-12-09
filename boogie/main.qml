@@ -13,5 +13,5 @@ ApplicationWindow {
         anchors.fill: parent
         initialItem: FirstPage {}
     }
-
 }
+

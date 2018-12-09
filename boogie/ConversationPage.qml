@@ -5,7 +5,7 @@ import QtQuick.Controls 2.1
 Page {
     id: root
 
-    property string inConvesationWith
+    property string inConversationWith
 
     header: ToolBar {
         ToolButton {
@@ -13,11 +13,11 @@ Page {
             anchors.left: parent.left
             anchors.leftMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            onClicked: root.StachView.view.pop()
+            onClicked: root.StackView.view.pop()
         }
         Label {
             id: pageTitle
-            text: inConvesationWith
+            text: inConversationWith
             font.pixelSize: 20
             anchors.centerIn: parent
         }
@@ -27,31 +27,9 @@ Page {
         anchors.fill: parent
 
         ListView {
+            // TODO: for messages
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.margins: pane.leftPadding + messageField.leftPadding
-            displayMarginBeginning: 40
-            displayMarginEnd: 40
-            verticalLayoutDirection: ListView.BottomToTop
-            spacing: 12
-            model: 10
-            delegate: Row {
-                readonly property bool sentByMe: index % 2 == 0
-                anchors.right: sentByMe ? parent.right : undefined
-                spacing: 6
-
-                Rectangle {
-                    id: avatar
-                    width: height
-                    height: parent.height
-                    color: "grey"
-                    visible: !sentByMe
-                }
-
-
-            }
-            ScrollBar.vertical: ScrollBar {}
-
         }
 
         Pane {
