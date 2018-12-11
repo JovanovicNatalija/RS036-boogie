@@ -46,7 +46,7 @@ void client::sendMsgData(QString from, QString to, QString msg) {
             strJsLen = QString::number(0) + strJsLen;
 		QString fullMsgString = strJsLen + strJs;
         sendMsg(fullMsgString);
-        qDebug() << strJs << strJs.length() << fullMsgString;
+		//qDebug() << strJs << strJs.length() << fullMsgString;
     }
 }
 
@@ -63,7 +63,7 @@ void client::sendAuthData(QString username, QString password){
             strJsLen = QString::number(0) + strJsLen;
 		QString fullAuthString = strJsLen + strJs;
         sendMsg(fullAuthString);
-        qDebug() << strJs << strJs.length() << fullAuthString;
+		//qDebug() << strJs << strJs.length() << fullAuthString;
     }
 }
 

@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 
 	quint16 port = quint16(atoi(argv[1]));
 	server s(port);
-	//still not exiting when this serverError is emited, TODOQ
+	//still not exiting when this serverError is emited, TODO
 	QObject::connect(&s, &server::serverError, &a, &QCoreApplication::quit, Qt::QueuedConnection);
 
 
