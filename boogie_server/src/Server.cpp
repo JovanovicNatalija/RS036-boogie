@@ -5,11 +5,11 @@
 #include <QDir>
 
 #include <iostream>
-#include "server.h"
+#include "Server.h"
 
-server::server(quint16 port)
+Server::Server(quint16 port)
 {
-	connect(this, &QTcpServer::newConnection, this, &server::newConnection);
+	connect(this, &QTcpServer::newConnection, this, &Server::newConnection);
 	if(port <= 1024){//first 1024 ports are not to be touched
 		qDebug() << "BAD PORT NUMBER";
 		emit serverError();
@@ -44,20 +44,20 @@ server::server(quint16 port)
 	qDebug("server created");
 }
 
-void server::newConnection(){
+void Server::newConnection(){
 	if(hasPendingConnections()){
 		QTcpSocket* client = nextPendingConnection();
 
 		m_users.push_back(client);
 
-		connect(client, &QTcpSocket::disconnected, this, &server::userDisconnected);
-		connect(client, &QTcpSocket::readyRead, this, &server::readMessage);
+		connect(client, &QTcpSocket::disconnected, this, &Server::userDisconnected);
+		connect(client, &QTcpSocket::readyRead, this, &Server::readMessage);
 
 		qDebug("User connected");
 	}
 }
 
-void server::userDisconnected(){
+void Server::userDisconnected(){
 	qDebug() << "User OUT";
 	QTcpSocket *disconnectedClient = qobject_cast<QTcpSocket *>(QObject::sender());
 	int index = m_users.indexOf(disconnectedClient);
@@ -68,12 +68,14 @@ void server::userDisconnected(){
 	disconnectedClient->deleteLater();
 }
 
-void server::readMessage(){
+void Server::readMessage(){
 	QTcpSocket* senderSocket = qobject_cast<QTcpSocket*>(sender());
 
-	QByteArray buff = senderSocket->read(4);
+	//reading first 4 characters, they represent length of message
+	QByteArray messageLength = senderSocket->read(4);
 
-	QJsonDocument jsonResponse = QJsonDocument::fromJson(senderSocket->read(buff.toInt()));
+	//reading next messageLength bytes
+	QJsonDocument jsonResponse = QJsonDocument::fromJson(senderSocket->read(messageLength.toInt()));
 	QJsonObject json = jsonResponse.object();
 
 	//if sent json object is auth object
@@ -96,11 +98,13 @@ void server::readMessage(){
 
 }
 
-bool server::auth(const QJsonObject & json){
+bool Server::auth(const QJsonObject & json){
 	QString username = json["username"].toString();
 	QString pass = json["password"].toString();
 	//if username was allready entered, check password
+	qDebug() << pass;
 	if(authData.contains(username)){
+		qDebug() << authData[username];
 		return authData[username] == pass;
 	}
 	//first login, append to file and to current map

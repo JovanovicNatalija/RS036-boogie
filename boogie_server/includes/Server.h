@@ -5,11 +5,11 @@
 #include <QDir>
 #include <QTcpServer>
 
-class server : public QTcpServer
+class Server : public QTcpServer
 {
 	Q_OBJECT
 public:
-	server(quint16 port);
+	Server(quint16 port);
 
 public slots:
 	void newConnection();
