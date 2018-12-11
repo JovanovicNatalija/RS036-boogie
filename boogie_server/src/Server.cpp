@@ -31,11 +31,11 @@ Server::Server(quint16 port)
 		return;
 	}
 
-	qint64 lineLength;
-	char data[1024];
-	while((lineLength = authFile.readLine(data, sizeof (data))) != -1){
-		QString tmp(data);
-		auto data = tmp.split(":");
+	QTextStream fileTextStream(&authFile);
+
+	QString line;
+	while(fileTextStream.readLineInto(&line, 50)){
+		auto data = line.split(":");
 		authData[data[0]] = data[1];
 	}
 	//reading whole file will set seek at the end and then any writing will be
@@ -102,9 +102,9 @@ bool Server::auth(const QJsonObject & json){
 	QString username = json["username"].toString();
 	QString pass = json["password"].toString();
 	//if username was allready entered, check password
-	qDebug() << pass;
+
 	if(authData.contains(username)){
-		qDebug() << authData[username];
+
 		return authData[username] == pass;
 	}
 	//first login, append to file and to current map
