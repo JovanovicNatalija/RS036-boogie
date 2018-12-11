@@ -1,7 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include "client.h"
+#include "includes/client.h"
 
 int main(int argc, char *argv[])
 {
@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
 
-    engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
+    engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
     if (engine.rootObjects().isEmpty())
         return -1;
 
@@ -21,12 +21,12 @@ int main(int argc, char *argv[])
     context->setContextProperty("client", &c);
 
     /*  ovo nam za sada nije potrebno
-        engine.load(QUrl(QStringLiteral("qrc:/ContactPage.qml")));
+        engine.load(QUrl(QStringLiteral("qrc:/qml/ContactPage.qml")));
         context = engine.rootContext();
         context->setContextProperty("client", &c);
     */
 
-    engine.load(QUrl(QStringLiteral("qrc:/ConversationPage.qml")));
+    engine.load(QUrl(QStringLiteral("qrc:/qml/ConversationPage.qml")));
     context = engine.rootContext();
     context->setContextProperty("client", &c);
 

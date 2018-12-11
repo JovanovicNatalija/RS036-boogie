@@ -25,7 +25,7 @@ Page {
             text: modelData
             width: listView.width - listView.leftMargin - listView.rightMargin
             onClicked: {
-                root.StackView.view.push("qrc:/ConversationPage.qml", { inConversationWith: modelData, from: username })
+                root.StackView.view.push("qrc:/qml/ConversationPage.qml", { inConversationWith: modelData, from: username })
             }
         }
 

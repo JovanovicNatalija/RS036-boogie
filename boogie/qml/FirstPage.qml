@@ -83,7 +83,8 @@ Page {
                     text: qsTr("Confirm")
                     enabled: ipField.length > 0 && usernameField.length > 0 && passwordField.length > 0
                     onClicked: {
-                        root.StackView.view.push("qrc:/ContactPage.qml", { username: usernameField.text });
+                        root.StackView.view.push("qrc:/qml/ContactPage.qml", { username: usernameField.text })
+
                         client.connectToServer(ipField.text)
                         client.sendAuthData(usernameField.text, passwordField.text)
                     }
