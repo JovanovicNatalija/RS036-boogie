@@ -3,7 +3,7 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QString>
-
+//192.168.191.128
 client::client(QObject* parrent)
     :QTcpSocket(parrent)
 {
@@ -34,6 +34,7 @@ void client::sendMsg(QString str) {
 
 void client::sendMsgData(QString from, QString to, QString msg) {
     QJsonObject js;
+	js.insert("type", "m");
     js.insert("from", from);
     js.insert("to", to);
     js.insert("msg", msg);
@@ -43,7 +44,7 @@ void client::sendMsgData(QString from, QString to, QString msg) {
         QString strJsLen = QString::number(strJs.length());
         while(strJsLen.length() < 4)
             strJsLen = QString::number(0) + strJsLen;
-        QString fullMsgString = 'm' + strJsLen + strJs;
+		QString fullMsgString = strJsLen + strJs;
         sendMsg(fullMsgString);
         qDebug() << strJs << strJs.length() << fullMsgString;
     }
@@ -51,6 +52,7 @@ void client::sendMsgData(QString from, QString to, QString msg) {
 
 void client::sendAuthData(QString username, QString password){
     QJsonObject js;
+	js.insert("type", "a");
     js.insert("password", password);
     js.insert("username", username);
     if(!js.empty()) {
@@ -59,7 +61,7 @@ void client::sendAuthData(QString username, QString password){
         QString strJsLen = QString::number(strJs.length());
         while(strJsLen.length() < 4)
             strJsLen = QString::number(0) + strJsLen;
-        QString fullAuthString = 'a' + strJsLen + strJs;
+		QString fullAuthString = strJsLen + strJs;
         sendMsg(fullAuthString);
         qDebug() << strJs << strJs.length() << fullAuthString;
     }
