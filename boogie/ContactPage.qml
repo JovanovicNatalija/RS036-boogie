@@ -2,7 +2,7 @@ import QtQuick 2.6
 import QtQuick.Controls 2.1
 
 Page {
-
+    property string username
     id: root
     header: ToolBar {
         Label {
@@ -25,7 +25,7 @@ Page {
             text: modelData
             width: listView.width - listView.leftMargin - listView.rightMargin
             onClicked: {
-                root.StackView.view.push("qrc:/ConversationPage.qml", { inConversationWith: modelData })
+                root.StackView.view.push("qrc:/ConversationPage.qml", { inConversationWith: modelData, from: username })
             }
         }
 

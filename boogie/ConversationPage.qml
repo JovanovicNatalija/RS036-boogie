@@ -6,6 +6,7 @@ Page {
     id: root
 
     property string inConversationWith
+    property string from
 
     header: ToolBar {
         ToolButton {
@@ -51,7 +52,7 @@ Page {
                     text: qsTr("Confirm")
                     enabled: messageField.length > 0
                     onClicked: {
-                        client.sendMsg(messageField.text)
+                        client.sendMsgData(from, inConversationWith, messageField.text)
                     }
                 }
             }

@@ -1,5 +1,8 @@
 #include "client.h"
 #include <iostream>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QString>
 
 client::client(QObject* parrent)
     :QTcpSocket(parrent)
@@ -29,4 +32,36 @@ void client::sendMsg(QString str) {
     write(str.toLocal8Bit().data());
 }
 
+void client::sendMsgData(QString from, QString to, QString msg) {
+    QJsonObject js;
+    js.insert("from", from);
+    js.insert("to", to);
+    js.insert("msg", msg);
+    if(!js.empty()) {
+        QJsonDocument doc(js);
+        QString strJs(doc.toJson(QJsonDocument::Compact));
+        QString strJsLen = QString::number(strJs.length());
+        while(strJsLen.length() < 4)
+            strJsLen = QString::number(0) + strJsLen;
+        QString fullMsgString = 'm' + strJsLen + strJs;
+        sendMsg(fullMsgString);
+        qDebug() << strJs << strJs.length() << fullMsgString;
+    }
+}
+
+void client::sendAuthData(QString username, QString password){
+    QJsonObject js;
+    js.insert("password", password);
+    js.insert("username", username);
+    if(!js.empty()) {
+        QJsonDocument doc(js);
+        QString strJs(doc.toJson(QJsonDocument::Compact));
+        QString strJsLen = QString::number(strJs.length());
+        while(strJsLen.length() < 4)
+            strJsLen = QString::number(0) + strJsLen;
+        QString fullAuthString = 'a' + strJsLen + strJs;
+        sendMsg(fullAuthString);
+        qDebug() << strJs << strJs.length() << fullAuthString;
+    }
+}
 
