@@ -85,8 +85,8 @@ Page {
                     onClicked: {
                         root.StackView.view.push("qrc:/qml/ContactPage.qml", { username: usernameField.text })
 
-                        client.connectToServer(ipField.text)
-                        client.sendAuthData(usernameField.text, passwordField.text)
+						Client.connectToServer(ipField.text)
+						Client.sendAuthData(usernameField.text, passwordField.text)
                     }
                 }
             }

@@ -1,16 +1,16 @@
-#include "client.h"
+#include "Client.h"
 #include <iostream>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QString>
 //192.168.191.128
-client::client(QObject* parrent)
+Client::Client(QObject* parrent)
     :QTcpSocket(parrent)
 {
-    std::cout << "Client created" << std::endl;
+	std::cout << "Client created" << std::endl;
 }
 
-void client::connectToServer(QString ip, quint16 port) {
+void Client::connectToServer(QString ip, quint16 port) {
     connectToHost(ip, port);
 
     connect(this, SIGNAL(readyRead()), this, SLOT(readMsg()));
@@ -18,21 +18,21 @@ void client::connectToServer(QString ip, quint16 port) {
     std::cout << "Connected to host" << std::endl;
 }
 
-void client::readMsg(){
+void Client::readMsg(){
     std::cout << "read msg:" << std::endl;
     std::cout << readAll().toStdString() << std::endl;
 }
 
-void client::disconnectFromServer() {
+void Client::disconnectFromServer() {
     disconnectFromHost();
     std::cout << "Disconected from host" << std::endl;
 }
 
-void client::sendMsg(QString str) {
+void Client::sendMsg(QString str) {
     write(str.toLocal8Bit().data());
 }
 
-void client::sendMsgData(QString from, QString to, QString msg) {
+void Client::sendMsgData(QString from, QString to, QString msg) {
     QJsonObject js;
 	js.insert("type", "m");
     js.insert("from", from);
@@ -50,7 +50,7 @@ void client::sendMsgData(QString from, QString to, QString msg) {
     }
 }
 
-void client::sendAuthData(QString username, QString password){
+void Client::sendAuthData(QString username, QString password){
     QJsonObject js;
 	js.insert("type", "a");
     js.insert("password", password);

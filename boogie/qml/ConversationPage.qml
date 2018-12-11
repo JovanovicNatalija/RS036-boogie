@@ -52,7 +52,7 @@ Page {
                     text: qsTr("Confirm")
                     enabled: messageField.length > 0
                     onClicked: {
-                        client.sendMsgData(from, inConversationWith, messageField.text)
+						Client.sendMsgData(from, inConversationWith, messageField.text)
                     }
                 }
             }

@@ -13,11 +13,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 HEADERS += \
-    includes/client.h
+    includes/Client.h
 
 SOURCES += \
     src/main.cpp \
-    src/client.cpp
+    src/Client.cpp
 
 RESOURCES += qml.qrc \
 
