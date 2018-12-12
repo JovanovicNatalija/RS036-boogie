@@ -23,6 +23,7 @@ private:
 	QFile authFile;
 	const QString AUTH_FILE_PATH = QDir::currentPath() + "/auth.txt";
 	QHash<QString, QString> authData;
+	QHash<QString, QTcpSocket*> usernameToSocket;
 
 signals:
 	void serverError();

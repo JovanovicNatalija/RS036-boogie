@@ -38,8 +38,8 @@ Server::Server(quint16 port)
 		auto data = line.split(":");
 		authData[data[0]] = data[1];
 	}
-	//reading whole file will set seek at the end and then any writing will be
-	//same as opening in append mode
+	//reading whole file will set seek at the end and then any writing will
+	//be same as opening in append mode
 
 	qDebug("server created");
 }
@@ -87,14 +87,19 @@ void Server::readMessage(){
 		}
 		else{
 			qDebug() << "AUTH SUCCESSFUL";
+			usernameToSocket[json["username"].toString()] = senderSocket;
 		}
 	}
+	//if sent data is message, forward it only to the intended recepient
+	//TODO this works only when recepient is online
+	else if(json["type"] == "m"){
+		qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
+		if(usernameToSocket.contains(json["to"].toString())){
+			usernameToSocket[json["to"].toString()]->write
+					(messageLength + jsonResponse.toJson(QJsonDocument::Compact));
+		}
 
-//	for(auto u : m_users){
-//		if(u == senderSocket){
-//			continue;
-//		}
-//	}
+	}
 
 }
 
