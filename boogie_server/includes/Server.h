@@ -17,13 +17,14 @@ public slots:
 	void readMessage();
 
 private:
-	//QTcpSocket *client;
-	QVector<QTcpSocket*> m_users;
-	bool auth(const QJsonObject&);
+
 	QFile authFile;
 	const QString AUTH_FILE_PATH = QDir::currentPath() + "/auth.txt";
 	QHash<QString, QString> authData;
 	QHash<QString, QTcpSocket*> usernameToSocket;
+
+	bool auth(const QJsonObject&);
+	void loadAuthData();
 
 signals:
 	void serverError();

@@ -22,17 +22,20 @@ Server::Server(quint16 port)
 		emit serverError();
 		return;
 	}
-	qDebug() << AUTH_FILE_PATH;
+	loadAuthData();;
+
+	qDebug("server created");
+}
+
+void Server::loadAuthData(){
 	authFile.setFileName(AUTH_FILE_PATH);
 
 	if(!authFile.open(QIODevice::ReadWrite)){
-		qDebug() << "opening auth file failed";
+		qDebug() << "Opening auth file failed";
 		emit serverError();
 		return;
 	}
-
 	QTextStream fileTextStream(&authFile);
-
 	QString line;
 	while(fileTextStream.readLineInto(&line, 50)){
 		auto data = line.split(":");
@@ -40,15 +43,11 @@ Server::Server(quint16 port)
 	}
 	//reading whole file will set seek at the end and then any writing will
 	//be same as opening in append mode
-
-	qDebug("server created");
 }
 
 void Server::newConnection(){
 	if(hasPendingConnections()){
 		QTcpSocket* client = nextPendingConnection();
-
-		m_users.push_back(client);
 
 		connect(client, &QTcpSocket::disconnected, this, &Server::userDisconnected);
 		connect(client, &QTcpSocket::readyRead, this, &Server::readMessage);
@@ -58,13 +57,12 @@ void Server::newConnection(){
 }
 
 void Server::userDisconnected(){
-	qDebug() << "User OUT";
-	QTcpSocket *disconnectedClient = qobject_cast<QTcpSocket *>(QObject::sender());
-	int index = m_users.indexOf(disconnectedClient);
 
-	if(index != -1){
-		m_users.removeAt(index);
-	}
+	QTcpSocket *disconnectedClient = qobject_cast<QTcpSocket *>(QObject::sender());
+	auto username = usernameToSocket.key(disconnectedClient);//linear time but its called rarely so its ok
+	usernameToSocket.remove(username);
+	qDebug() << "User " << username << " OUT";
+
 	disconnectedClient->deleteLater();
 }
 
