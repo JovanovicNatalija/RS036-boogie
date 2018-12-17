@@ -11,11 +11,11 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
 
+    Client c;
+
     engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
     if (engine.rootObjects().isEmpty())
         return -1;
-
-	Client c;
 
     QQmlContext* context = engine.rootContext();
 	context->setContextProperty("Client", &c);

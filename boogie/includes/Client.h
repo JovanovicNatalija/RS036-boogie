@@ -2,7 +2,6 @@
 #define CLIENT_H
 
 #include <QTcpSocket>
-//TODO refactor client->Client
 class Client : public QTcpSocket
 {
     Q_OBJECT
@@ -13,6 +12,9 @@ public:
     Q_INVOKABLE void sendAuthData(QString username, QString password);
     Q_INVOKABLE void sendMsgData(QString from, QString to, QString msg);
     void disconnectFromServer();
+
+signals:
+    void showMsg(QString msgFrom, QString msg);
 
 public slots:
     void readMsg();

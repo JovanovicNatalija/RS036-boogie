@@ -7,6 +7,7 @@ Page {
 
     property string inConversationWith
     property string from
+    property int index : 0
 
     header: ToolBar {
         ToolButton {
@@ -24,13 +25,44 @@ Page {
         }
     }
 
+    ListModel {
+        id: messageModel
+    }
+
+    Connections {
+        target: Client
+        onShowMsg: {
+            if(inConversationWith === msgFrom)
+                messageModel.append({message: msg, index : 0})
+        }
+    }
+
+
     ColumnLayout {
         anchors.fill: parent
 
+
         ListView {
-            // TODO: for messages
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.margins: pane.leftPadding
+
+            spacing: 12
+
+            model: messageModel
+
+            delegate: Rectangle {
+                width: lblMsg.width
+                height: 40
+                color: index ? "rosybrown" : "violet"
+                Label {
+                    id: lblMsg
+                    text: model.message
+                    anchors.centerIn: parent
+                }
+            }
+
+            ScrollBar.vertical: ScrollBar {}
         }
 
         Pane {
@@ -40,7 +72,7 @@ Page {
             RowLayout {
                 width: parent.width
 
-                TextArea {
+                TextArea  {
                     id: messageField
                     Layout.fillWidth: true
                     placeholderText: qsTr("Compose message")
@@ -53,6 +85,8 @@ Page {
                     enabled: messageField.length > 0
                     onClicked: {
 						Client.sendMsgData(from, inConversationWith, messageField.text)
+                        messageModel.append({message: messageField.text, index : 1});
+                        messageField.clear()
                     }
                 }
             }
