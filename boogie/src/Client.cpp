@@ -19,8 +19,10 @@ void Client::connectToServer(QString ip, quint16 port) {
 }
 
 void Client::readMsg(){
-    std::cout << "read msg:" << std::endl;
-    std::cout << readAll().toStdString() << std::endl;
+    QByteArray messageLength = read(4);
+    QJsonDocument jsonMsg = QJsonDocument::fromJson(read(messageLength.toInt()));
+    QJsonObject json = jsonMsg.object();
+    emit showMsg(json["from"].toString(), json["msg"].toString());
 }
 
 void Client::disconnectFromServer() {

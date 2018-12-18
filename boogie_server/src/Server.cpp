@@ -38,6 +38,11 @@ void Server::loadAuthData(){
 	QTextStream fileTextStream(&authFile);
 	QString line;
 	while(fileTextStream.readLineInto(&line, 50)){
+		if(!line.contains(":")){
+			qDebug() << "BAD AUTH FILE FORMAT";
+			emit serverError();
+			return;
+		}
 		auto data = line.split(":");
 		authData[data[0]] = data[1];
 	}
@@ -96,9 +101,7 @@ void Server::readMessage(){
 			usernameToSocket[json["to"].toString()]->write
 					(messageLength + jsonResponse.toJson(QJsonDocument::Compact));
 		}
-
 	}
-
 }
 
 bool Server::auth(const QJsonObject & json){
@@ -110,6 +113,7 @@ bool Server::auth(const QJsonObject & json){
 
 		return authData[username] == pass;
 	}
+
 	//first login, append to file and to current map
 	//TODO create better system for making account
 	else{
