@@ -15,7 +15,10 @@ Page {
             anchors.left: parent.left
             anchors.leftMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            onClicked: root.StackView.view.pop()
+            onClicked: {
+                Client.writeInXml(from)
+                root.StackView.view.pop()
+            }
         }
         Label {
             id: pageTitle
@@ -32,8 +35,10 @@ Page {
     Connections {
         target: Client
         onShowMsg: {
-            if(inConversationWith === msgFrom)
+            if(inConversationWith === msgFrom) {
                 messageModel.append({message: msg, index : 0})
+                Client.addMsgToBuffer(inConversationWith, inConversationWith, msg)
+            }
         }
     }
 
@@ -85,6 +90,7 @@ Page {
                     enabled: messageField.length > 0
                     onClicked: {
 						Client.sendMsgData(from, inConversationWith, messageField.text)
+                        Client.addMsgToBuffer(from, inConversationWith, messageField.text)
                         messageModel.append({message: messageField.text, index : 1});
                         messageField.clear()
                     }

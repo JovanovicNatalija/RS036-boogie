@@ -3,6 +3,11 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QString>
+#include <utility>
+#include <iterator>
+#include <QXmlStreamWriter>
+#include <QFile>
+#include <QDir>
 //192.168.191.128
 Client::Client(QObject* parrent)
     :QTcpSocket(parrent)
@@ -32,6 +37,42 @@ void Client::disconnectFromServer() {
 
 void Client::sendMsg(QString str) {
     write(str.toLocal8Bit().data());
+}
+
+//dodajemo poruku u bafer
+void Client::addMsgToBuffer(QString from, QString to, QString msg) {
+    appendToBuffer(from, to, msg);
+}
+
+//pisemo istoriju ceta u xml fajl
+void Client::writeInXml(QString username) {
+    QString filePath = username + ".xml";
+    QFile data(filePath);
+        if (!data.open(QFile::WriteOnly | QFile::Truncate))
+            return;
+
+    QXmlStreamWriter xml(&data);
+    xml.setAutoFormatting(true);
+    xml.writeStartDocument();
+    xml.writeStartElement("username");
+    xml.writeAttribute("user", username);
+    std::map<QString, std::vector<std::pair<QString, QString>>>::iterator it = msgDataBuffer.begin();
+        while(it != msgDataBuffer.end())
+        {
+            xml.writeStartElement("inConversationWith");
+            xml.writeAttribute("user", it->first);
+            for(auto a: it->second) {
+                xml.writeStartElement("message");
+                xml.writeTextElement("sender", a.first);
+                xml.writeTextElement("text", a.second);
+                xml.writeEndElement();
+            }
+            xml.writeEndElement();
+            it++;
+        }
+    xml.writeEndElement();
+    xml.writeEndDocument();
+    data.close();
 }
 
 //saljemo poruku i podatke o njoj na server
@@ -73,7 +114,7 @@ void Client::sendAuthData(QString username, QString password){
             strJsonLen = QString::number(0) + strJsonLen;
         QString fullAuthString = strJsonLen + strJson;
         sendMsg(fullAuthString);
-		//qDebug() << strJs << strJs.length() << fullAuthString;
+        //qDebug() << strJson << strJson.length() << fullAuthString;
     }
 }
 
