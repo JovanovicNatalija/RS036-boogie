@@ -60,6 +60,12 @@ Page {
                 width: lblMsg.width
                 height: 40
                 color: index ? "rosybrown" : "violet"
+                //postavljamo poruke koje smo mi poslali desno, a one koje
+                //smo primili ostavljamo levo
+                anchors.right: {
+                    if(index) parent.right
+                }
+
                 Label {
                     id: lblMsg
                     text: model.message

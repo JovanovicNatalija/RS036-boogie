@@ -5,6 +5,9 @@
 #include <map>
 #include <vector>
 #include <iterator>
+#include <tuple>
+#include <ctime>
+#include <chrono>
 class Client : public QTcpSocket
 {
     Q_OBJECT
@@ -27,12 +30,18 @@ public slots:
 
 public:
     //pravimo buffer u vidu mape koja sadrzi podatke: kljuc je username one osobe sa kojom je korisnik
-    //u konverzaciji, vrednost je par stringova prvi predstavlja username onoga ko je poslao poruku
-    // a drugi je sama poruka
-    std::map<QString, std::vector<std::pair<QString, QString>>> msgDataBuffer;
+    //u konverzaciji, vrednost je touple od 3 stringa prvi predstavlja username onoga ko je poslao poruku,
+    // drugi je sama poruka a treci vreme slanja poruke
+    std::map<QString, std::vector<std::tuple<QString, QString, QString>>> msgDataBuffer;
 
     void appendToBuffer(QString msgFrom, QString inConversationWith, QString msg){
-        msgDataBuffer[inConversationWith].push_back(std::make_pair(msgFrom, msg));
+        //hvatamo trenutno vreme i pretvaramo ga u string zbog lakseg upisivanja u xml
+        auto start = std::chrono::system_clock::now();
+        std::time_t end_time = std::chrono::system_clock::to_time_t(start);
+        std::tm * ptm = std::localtime(&end_time);
+        char buffer[32];
+        std::strftime(buffer, 32, "%a, %d.%m.%Y %H:%M:%S", ptm);
+        msgDataBuffer[inConversationWith].push_back(std::make_tuple(msgFrom, msg, buffer));
     }
 };
 

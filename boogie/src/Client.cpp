@@ -8,6 +8,8 @@
 #include <QXmlStreamWriter>
 #include <QFile>
 #include <QDir>
+#include <ctime>
+#include <tuple>
 //192.168.191.128
 Client::Client(QObject* parrent)
     :QTcpSocket(parrent)
@@ -56,15 +58,16 @@ void Client::writeInXml(QString username) {
     xml.writeStartDocument();
     xml.writeStartElement("username");
     xml.writeAttribute("user", username);
-    std::map<QString, std::vector<std::pair<QString, QString>>>::iterator it = msgDataBuffer.begin();
+    std::map<QString, std::vector<std::tuple<QString, QString, QString>>>::iterator it = msgDataBuffer.begin();
         while(it != msgDataBuffer.end())
         {
             xml.writeStartElement("inConversationWith");
             xml.writeAttribute("user", it->first);
             for(auto a: it->second) {
                 xml.writeStartElement("message");
-                xml.writeTextElement("sender", a.first);
-                xml.writeTextElement("text", a.second);
+                xml.writeTextElement("sender", std::get<0>(a));
+                xml.writeTextElement("text", std::get<1>(a));
+                xml.writeTextElement("time", std::get<2>(a));
                 xml.writeEndElement();
             }
             xml.writeEndElement();
