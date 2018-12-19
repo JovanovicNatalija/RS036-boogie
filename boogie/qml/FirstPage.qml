@@ -24,72 +24,73 @@ Page {
         }
     }
 
-    ColumnLayout {
-        anchors.centerIn: parent
+	ColumnLayout {
+		anchors.centerIn: parent
 
         Pane {
             id: pane
             Layout.fillWidth: true
 
-            Column {
-                width: parent.width
+			Column {
+				width: parent.width
 
-                Row {
-                    Label{
-                        id: ipLabel
-                        text: qsTr("Server ip address:")
-                        font.pixelSize: 14
-                    }
+				GridLayout{
+					id:glMainLayout
+					columns:2
 
-                    TextField {
-                        id: ipField
-                        placeholderText: qsTr("127.0.0.1")
-                        selectByMouse: true
-                    }
-                }
+					Label{
+						id: ipLabel
+						text: qsTr("Server ip address:")
+						font.pixelSize: 14
+					}
+					TextField {
+						id: ipField
+						placeholderText: qsTr("127.0.0.1")
+						selectByMouse: true
+					}
 
-                Row {
-                    Label{
-                        id: usernameLabel
-                        text: qsTr("username:")
-                        font.pixelSize: 14
+					Label{
+						id: usernameLabel
+						text: qsTr("username:")
+						font.pixelSize: 14
+					}
 
-                    }
+					TextField {
+						id: usernameField
+						anchors.topMargin: 20
+						placeholderText: qsTr("username")
+						selectByMouse: true
+					}
 
-                    TextField {
-                        id: usernameField
-                        anchors.topMargin: 20
-                        placeholderText: qsTr("username")
-                        selectByMouse: true
+					Label{
+						id: passwordLabel
+						text: qsTr("password:")
+						font.pixelSize: 14
+					}
+					TextField {
+						id: passwordField
+						echoMode: TextInput.Password
+						placeholderText: qsTr("*********")
+						selectByMouse: true
+					}
+				}
 
-                    }
-                }
-                Row {
-                    Label{
-                        id: passwordLabel
-                        text: qsTr("password:")
-                        font.pixelSize: 14
-                    }
-                    TextField {
-                        id: passwordField
-                        echoMode: TextInput.Password
-                        placeholderText: qsTr("*********")
-                        selectByMouse: true
-                    }
-                }
-
-                Button {
-                    id: sendButton
-                    text: qsTr("Confirm")
-                    enabled: ipField.length > 0 && usernameField.length > 0 && passwordField.length > 0
-                    onClicked: {
-                        root.StackView.view.push("qrc:/qml/ContactPage.qml", { username: usernameField.text })
-
+				Button {
+					id: sendButton
+					text: qsTr("Confirm")
+					enabled: ipField.length > 0 &&
+							 usernameField.length > 0 && passwordField.length > 0
+					anchors.horizontalCenter: parent.horizontalCenter
+					onClicked: {
+						root.StackView.view.push(
+									"qrc:/qml/ContactPage.qml",
+									{ username: usernameField.text })
 						Client.connectToServer(ipField.text)
 						Client.sendAuthData(usernameField.text, passwordField.text)
-                    }
-                }
-            }
-        }
-    }
-}
+					}//onClicked
+				}//Button
+
+			}//Column
+		}//Pane
+	}//ColLayout
+}//Page
