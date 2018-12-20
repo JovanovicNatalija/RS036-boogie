@@ -10,6 +10,8 @@ class Server : public QTcpServer
 	Q_OBJECT
 public:
 	Server(quint16 port);
+	bool isInitialized();
+	void showError();
 
 public slots:
 	void newConnection();
@@ -17,17 +19,14 @@ public slots:
 	void readMessage();
 
 private:
-
 	QFile authFile;
 	const QString AUTH_FILE_PATH = QDir::currentPath() + "/auth.txt";
-	QHash<QString, QString> authData;
-	QHash<QString, QTcpSocket*> usernameToSocket;
-
+	QHash<QString, QString> m_authData;
+	QHash<QString, QTcpSocket*> m_usernameToSocket;
+	bool m_isInitialized;
+	std::string m_errorMessage;
 	bool auth(const QJsonObject&);
 	void loadAuthData();
-
-signals:
-	void serverError();
 };
 
 #endif // SERVER_H

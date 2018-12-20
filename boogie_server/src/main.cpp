@@ -14,9 +14,11 @@ int main(int argc, char *argv[])
 
 	quint16 port = quint16(atoi(argv[1]));
 	Server s(port);
-	//still not exiting when this ServerError is emited, TODO
-	QObject::connect(&s, &Server::serverError, &a, &QCoreApplication::quit, Qt::QueuedConnection);
 
+	if(!s.isInitialized()){
+		s.showError();
+		return -1;
+	}
 
 	return a.exec();
 }

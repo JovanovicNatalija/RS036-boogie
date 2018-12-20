@@ -9,21 +9,21 @@
 
 Server::Server(quint16 port)
 {
-	connect(this, &QTcpServer::newConnection, this, &Server::newConnection);
+	m_isInitialized = true;
 	if(port <= 1024){//first 1024 ports are not to be touched
-		qDebug() << "BAD PORT NUMBER";
-		emit serverError();
-		return;
+		m_errorMessage =  "BAD PORT NUMBER";
+		m_isInitialized = false;
 	}
 
 	bool listening = listen(QHostAddress::Any, port);
 	if(listening == false){
-		qDebug() << "SERVER ERROR, cant listen on port " << port;
-		emit serverError();
-		return;
+		m_errorMessage = "SERVER ERROR, CAN'T LISTEN ON PORT "
+				+ std::to_string(port);
+		m_isInitialized = false;
 	}
-	loadAuthData();;
+	loadAuthData();
 
+	connect(this, &QTcpServer::newConnection, this, &Server::newConnection);
 	qDebug("server created");
 }
 
@@ -31,20 +31,18 @@ void Server::loadAuthData(){
 	authFile.setFileName(AUTH_FILE_PATH);
 
 	if(!authFile.open(QIODevice::ReadWrite)){
-		qDebug() << "Opening auth file failed";
-		emit serverError();
-		return;
+		m_errorMessage =  "OPENING AUTH FILE FAILED";
+		m_isInitialized = false;
 	}
 	QTextStream fileTextStream(&authFile);
 	QString line;
 	while(fileTextStream.readLineInto(&line, 50)){
 		if(!line.contains(":")){
-			qDebug() << "BAD AUTH FILE FORMAT";
-			emit serverError();
-			return;
+			m_errorMessage =  "BAD AUTH FILE FORMAT";
+			m_isInitialized = false;
 		}
 		auto data = line.split(":");
-		authData[data[0]] = data[1];
+		m_authData[data[0]] = data[1];
 	}
 	//reading whole file will set seek at the end and then any writing will
 	//be same as opening in append mode
@@ -64,8 +62,8 @@ void Server::newConnection(){
 void Server::userDisconnected(){
 
 	QTcpSocket *disconnectedClient = qobject_cast<QTcpSocket *>(QObject::sender());
-	auto username = usernameToSocket.key(disconnectedClient);//linear time but its called rarely so its ok
-	usernameToSocket.remove(username);
+	auto username = m_usernameToSocket.key(disconnectedClient);//linear time but its called rarely so its ok
+	m_usernameToSocket.remove(username);
 	qDebug() << "User " << username << " OUT";
 
 	disconnectedClient->deleteLater();
@@ -90,15 +88,15 @@ void Server::readMessage(){
 		}
 		else{
 			qDebug() << "AUTH SUCCESSFUL";
-			usernameToSocket[json["username"].toString()] = senderSocket;
+			m_usernameToSocket[json["username"].toString()] = senderSocket;
 		}
 	}
 	//if sent data is message, forward it only to the intended recepient
 	//TODO this works only when recepient is online
 	else if(json["type"] == "m"){
 		qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
-		if(usernameToSocket.contains(json["to"].toString())){
-			usernameToSocket[json["to"].toString()]->write
+		if(m_usernameToSocket.contains(json["to"].toString())){
+			m_usernameToSocket[json["to"].toString()]->write
 					(messageLength + jsonResponse.toJson(QJsonDocument::Compact));
 		}
 	}
@@ -109,9 +107,8 @@ bool Server::auth(const QJsonObject & json){
 	QString pass = json["password"].toString();
 	//if username was allready entered, check password
 
-	if(authData.contains(username)){
-
-		return authData[username] == pass;
+	if(m_authData.contains(username)){
+		return m_authData[username] == pass;
 	}
 
 	//first login, append to file and to current map
@@ -119,8 +116,15 @@ bool Server::auth(const QJsonObject & json){
 	else{
 		authFile.write((username + ":" + pass + "\n").toStdString().data());
 		authFile.flush();
-		authData[username] = pass;
+		m_authData[username] = pass;
 		return true;
 	}
 
+}
+
+bool Server::isInitialized(){
+	return m_isInitialized;
+}
+void Server::showError(){
+	std::cerr << m_errorMessage << std::endl;
 }
