@@ -6,6 +6,9 @@
 
 #include <iostream>
 #include "Server.h"
+#include "client.h"
+
+Server::~Server(){}
 
 Server::Server(quint16 port)
 {
@@ -49,24 +52,16 @@ void Server::loadAuthData(){
 }
 
 void Server::newConnection(){
-	if(hasPendingConnections()){
-		QTcpSocket* client = nextPendingConnection();
+	if(this->hasPendingConnections()){
+		QTcpSocket* client = this->nextPendingConnection();
 
-		connect(client, &QTcpSocket::disconnected, this, &Server::userDisconnected);
+		//TODO can i do it without these connections?!
+		connect(client, &QTcpSocket::disconnected, this,
+				&Server::userDisconnected);
 		connect(client, &QTcpSocket::readyRead, this, &Server::readMessage);
 
 		qDebug("User connected");
 	}
-}
-
-void Server::userDisconnected(){
-
-	QTcpSocket *disconnectedClient = qobject_cast<QTcpSocket *>(QObject::sender());
-	auto username = m_usernameToSocket.key(disconnectedClient);//linear time but its called rarely so its ok
-	m_usernameToSocket.remove(username);
-	qDebug() << "User " << username << " OUT";
-
-	disconnectedClient->deleteLater();
 }
 
 void Server::readMessage(){
@@ -74,9 +69,11 @@ void Server::readMessage(){
 
 	//reading first 4 characters, they represent length of message
 	QByteArray messageLength = senderSocket->read(4);
+	//TODO check if received data is number
 
 	//reading next messageLength bytes
-	QJsonDocument jsonResponse = QJsonDocument::fromJson(senderSocket->read(messageLength.toInt()));
+	QJsonDocument jsonResponse = QJsonDocument::fromJson(
+				senderSocket->read(messageLength.toInt()));
 	QJsonObject json = jsonResponse.object();
 
 	//if sent json object is auth object
@@ -88,17 +85,31 @@ void Server::readMessage(){
 		}
 		else{
 			qDebug() << "AUTH SUCCESSFUL";
-			m_usernameToSocket[json["username"].toString()] = senderSocket;
+			Client *client = new Client(json["username"].toString(),
+					senderSocket);
+
+			//disconnect all signals from this socket beacuse they will be
+			//connected in Client class
+			senderSocket->disconnect();
+			m_usernameToClient[json["username"].toString().toStdString()] =
+					std::move(client);
+
+			connect (senderSocket, &QTcpSocket::readyRead,client,
+					 &Client::readMessage);
+			connect (senderSocket, &QTcpSocket::disconnected,client,
+					 &Client::disconnected);
 		}
 	}
 	//if sent data is message, forward it only to the intended recepient
 	//TODO this works only when recepient is online
 	else if(json["type"] == "m"){
-		qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
-		if(m_usernameToSocket.contains(json["to"].toString())){
-			m_usernameToSocket[json["to"].toString()]->write
-					(messageLength + jsonResponse.toJson(QJsonDocument::Compact));
-		}
+		qDebug() << "THIS SHOULD NOT HAVE HAPPEND!!!!";
+//		qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
+//		if(m_usernameToClient.contains(json["to"].toString())){
+//			//TODO check for ret val of write
+//			m_usernameToClient[json["to"].toString()].write
+//					(messageLength + jsonResponse.toJson(QJsonDocument::Compact));
+//		}
 	}
 }
 
@@ -119,7 +130,6 @@ bool Server::auth(const QJsonObject & json){
 		m_authData[username] = pass;
 		return true;
 	}
-
 }
 
 bool Server::isInitialized(){
