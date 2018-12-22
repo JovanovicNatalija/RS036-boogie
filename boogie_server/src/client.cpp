@@ -54,3 +54,7 @@ void Client::disconnected(){
 	qDebug() << "User " << username << " OUT";
 }
 
+qint64 Client::sendMessage(const QByteArray& byteArray){
+	return socket_ptr->write(byteArray);
+}
+

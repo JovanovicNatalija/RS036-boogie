@@ -17,6 +17,9 @@ public:
 private:
 	QString username;
 	QTcpSocket* socket_ptr;
+	//vector of usernames of all contacts of this client
+	QVector<QString> contactUsernames;
+	QVector<Client*> onlineContacts;
 
 public slots:
 	void readMessage();
