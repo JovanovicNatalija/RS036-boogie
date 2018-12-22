@@ -30,6 +30,8 @@ public slots:
 private:
 	QDomDocument m_dataDoc;
 	QDomNodeList m_users;
+	QDomElement createNewXmlElement(QString tagName, QString text = "",
+									QString attribute = "", QString value = "");
 
 	const QString DATA_FILE_PATH = QDir::currentPath() + "/data.xml";
 	QHash<QString, QString> m_authData;

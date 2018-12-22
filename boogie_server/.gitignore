@@ -71,5 +71,6 @@ Thumbs.db
 *.dll
 *.exe
 
-#server authentication file
-auth*
+#server data
+data.xml
+

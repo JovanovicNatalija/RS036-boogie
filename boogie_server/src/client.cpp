@@ -35,25 +35,6 @@ Client::Client(Client &&other)
 }
 
 
-void Client::readMessage(){
-
-	//reading first 4 characters, they represent length of message
-	QByteArray messageLength = socket_ptr->read(4);
-	//reading next messageLength bytes
-	QJsonDocument jsonResponse = QJsonDocument::fromJson(socket_ptr->read(
-											messageLength.toInt()));
-	QJsonObject jsonMessage = jsonResponse.object();
-
-	if(jsonMessage["type"] == "m"){
-		//TODO here we will check if the one we want to send message to
-		//is in our contact list
-
-	}
-}
-void Client::disconnected(){
-	qDebug() << "User " << username << " OUT";
-}
-
 qint64 Client::sendMessage(const QByteArray& byteArray){
 	return socket_ptr->write(byteArray);
 }

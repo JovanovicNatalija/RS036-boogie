@@ -17,6 +17,7 @@
 QString packMessage(QJsonObject dataToSend){
 	QJsonDocument tmp(dataToSend);
 	QString jsonToString{tmp.toJson(QJsonDocument::Compact)};
+	qDebug() << jsonToString;
 	QString strJsonLen = QString::number(jsonToString.length());
 
 	while(strJsonLen.length() < 4)
@@ -73,7 +74,7 @@ void Server::loadData(){
 			m_isInitialized = false;
 			return;
 		}
-		dataFile.close(); //CHECK
+		dataFile.close();
 	}
 	QDomElement root = m_dataDoc.firstChildElement();
 	m_users = root.elementsByTagName("user");
@@ -97,11 +98,7 @@ void Server::loadData(){
 			qDebug() << "kontakt: " << contacts.at(j).toElement().text() << " \n";
 			m_contacts[currUsername].append(contacts.at(j).toElement().text());
 		}
-
-
 	}
-
-
 }
 void Server::newConnection(){
 	if(this->hasPendingConnections()){
@@ -147,6 +144,20 @@ void Server::saveXMLFile(){
 
 }
 
+QDomElement Server::createNewXmlElement(QString tagName, QString text,
+										QString attribute, QString value){
+	QDomElement newElement = m_dataDoc.createElement(tagName);
+	if(text != ""){
+		QDomText newElementText = m_dataDoc.createTextNode(text);
+		newElement.appendChild(newElementText);
+	}
+	if(attribute != ""){
+		newElement.setAttribute(attribute, value);
+	}
+
+	return newElement;
+}
+
 //adds contact to array of contacts and to DOM
 //TODO should this add to client as well
 void Server::addNewContact(QString user, QString contact)
@@ -159,9 +170,7 @@ void Server::addNewContact(QString user, QString contact)
 			!= user){
 		userDomElement = m_users.at(i++);
 	}
-	QDomElement newContact = m_dataDoc.createElement("contact");
-	QDomText contactText = m_dataDoc.createTextNode(contact);
-	newContact.appendChild(contactText);
+	QDomElement newContact = createNewXmlElement("contact", contact);
 	userDomElement.firstChildElement("contacts").appendChild(newContact);
 	saveXMLFile();
 }
@@ -171,16 +180,35 @@ void Server::readMessage(){
 
 	//reading first 4 characters, they represent length of message
 	QByteArray messageLength = senderSocket->read(4);
-	//TODO check if received data is number
+	if(!std::all_of(
+				messageLength.begin(), messageLength.end(),
+				[](char c){return isdigit(c);})
+			){
+		//reading all but not saving it since it is not in valid format
+		senderSocket->readAll();
+		QString errorMessage = "BAD MESSAGE FORMAT, FIRST 4 BYTES ARE NOT NUMBER";
+		QByteArray forSending = (QString::number(errorMessage.length())
+								 + errorMessage).toLocal8Bit().data();
+		senderSocket->write(forSending);
+		return;
+	}
+
 
 	//reading next messageLength bytes
 	QJsonDocument jsonResponse = QJsonDocument::fromJson(
 				senderSocket->read(messageLength.toInt()));
-	QJsonObject json = jsonResponse.object();
+	if(jsonResponse.isNull()){
+		QString errorMessage = "BAD MESSAGE FORMAT, APPEARS NOT TO BE JSON";
+		QByteArray forSending = (QString::number(errorMessage.length())
+								 + errorMessage).toLocal8Bit().data();
+		senderSocket->write(forSending);
+		return;
+	}
+	QJsonObject jsonResponseObject = jsonResponse.object();
 
 	//if sent json object is auth object
-	if(json["type"] == "a"){
-		if(auth(json) == false){
+	if(jsonResponseObject["type"] == "a"){
+		if(auth(jsonResponseObject) == false){
 			qDebug() << "BAD PASS";
 			senderSocket->write("BAD PASS");
 			senderSocket->disconnectFromHost();
@@ -188,7 +216,7 @@ void Server::readMessage(){
 		else{
 			qDebug() << "AUTH SUCCESSFUL";
 			//helper var, just for nicer code;
-			QString tmpUsername = json["username"].toString();
+			QString tmpUsername = jsonResponseObject["username"].toString();
 			Client *client = new Client(tmpUsername,
 					senderSocket);
 			QJsonObject contactsDataJson;
@@ -209,9 +237,9 @@ void Server::readMessage(){
 	}
 	//if sent data is message, forward it only to the intended recepient
 	//TODO this works only when recepient is online
-	else if(json["type"] == "m"){
-		auto tmpTo = json["to"].toString();
-		auto tmpFrom = json["from"].toString();
+	else if(jsonResponseObject["type"] == "m"){
+		QString tmpTo = jsonResponseObject["to"].toString();
+		QString tmpFrom = jsonResponseObject["from"].toString();
 
 		//Contact creation
 		//TODO This will be changed later
@@ -223,12 +251,11 @@ void Server::readMessage(){
 		}
 
 		qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
-		if(m_usernameToClient.find(json["to"].toString().toStdString())
+		if(m_usernameToClient.find(jsonResponseObject["to"].toString().toStdString())
 				!= m_usernameToClient.end()){
-			//TODO write functions that does this because it will need to write in file as well
-			auto ret = m_usernameToClient[tmpTo.toStdString()]->sendMessage
-					(messageLength + jsonResponse.toJson(QJsonDocument::Compact));
-			if(ret == -1){
+
+			bool ret = sendMessageTo(m_usernameToClient[tmpTo.toStdString()], jsonResponseObject);
+			if(!ret){
 				//send message to sender socket that writing failed
 			}
 		}
@@ -238,14 +265,11 @@ void Server::readMessage(){
 
 void Server::createUser(QString pass, QString username)
 {
-	QDomElement newUser = m_dataDoc.createElement("user");
-	newUser.setAttribute("username", username);
+	QDomElement newUser = createNewXmlElement("user", "", "username", username);
 
-	QDomElement password = m_dataDoc.createElement("password");
-	QDomText passwordText = m_dataDoc.createTextNode(pass);
-	password.appendChild(passwordText);
+	QDomElement password = createNewXmlElement("password", pass);
 
-	QDomElement contacts = m_dataDoc.createElement("contacts");
+	QDomElement contacts = createNewXmlElement("contacts");
 	newUser.appendChild(password);
 	newUser.appendChild(contacts);
 
@@ -278,5 +302,3 @@ bool Server::isInitialized(){
 void Server::showError(){
 	std::cerr << m_errorMessage << std::endl;
 }
-
-
