@@ -10,7 +10,10 @@
 #include <QDir>
 #include <ctime>
 #include <tuple>
-//192.168.191.128
+
+#include "../util/util.h"
+
+
 Client::Client(QObject* parrent)
     :QTcpSocket(parrent)
 {
@@ -58,7 +61,7 @@ void Client::writeInXml(QString username) {
     xml.writeStartDocument();
     xml.writeStartElement("username");
     xml.writeAttribute("user", username);
-    std::map<QString, std::vector<std::tuple<QString, QString, QString>>>::iterator it = msgDataBuffer.begin();
+	auto it = msgDataBuffer.begin();
         while(it != msgDataBuffer.end())
         {
             xml.writeStartElement("inConversationWith");
@@ -81,20 +84,13 @@ void Client::writeInXml(QString username) {
 //saljemo poruku i podatke o njoj na server
 void Client::sendMsgData(QString from, QString to, QString msg) {
     //pravimo json objekat u koji smestamo podatke
-    QJsonObject json;
-    json.insert("type", "m");
-    json.insert("from", from);
-    json.insert("to", to);
-    json.insert("msg", msg);
-    if(!json.empty()) {
-        //pravimo QJsonDocument objekat da bi mogli da ga transformisemo u string
-        QJsonDocument doc(json);
-        QString strJson(doc.toJson(QJsonDocument::Compact));
-        QString strJsonLen = QString::number(strJson.length());
-        //dodajemo 0 na pocetak stringa do duzine 4
-        while(strJsonLen.length() < 4)
-            strJsonLen = QString::number(0) + strJsonLen;
-        QString fullMsgString = strJsonLen + strJson;
+	QJsonObject jsonMessageObject;
+	jsonMessageObject.insert("type", MessageType::Text);
+	jsonMessageObject.insert("from", from);
+	jsonMessageObject.insert("to", to);
+	jsonMessageObject.insert("msg", msg);
+	if(!jsonMessageObject.empty()) {
+		QString fullMsgString = packMessage(jsonMessageObject);
         sendMsg(fullMsgString);
 		//qDebug() << strJs << strJs.length() << fullMsgString;
     }
@@ -102,20 +98,13 @@ void Client::sendMsgData(QString from, QString to, QString msg) {
 
 //saljemo podatke za proveru username i sifre na server
 void Client::sendAuthData(QString username, QString password){
-    QJsonObject json;
+	QJsonObject jsonAuthObject;
     //pravimo json objekat u koji smestamo podatke
-    json.insert("type", "a");
-    json.insert("password", password);
-    json.insert("username", username);
-    if(!json.empty()) {
-        //pravimo QJsonDocument objekat da bi mogli da ga transformisemo u string
-        QJsonDocument doc(json);
-        QString strJson(doc.toJson(QJsonDocument::Compact));
-        QString strJsonLen = QString::number(strJson.length());
-        //dodajemo 0 na pocetak stringa do duzine 4
-        while(strJsonLen.length() < 4)
-            strJsonLen = QString::number(0) + strJsonLen;
-        QString fullAuthString = strJsonLen + strJson;
+	jsonAuthObject.insert("type", MessageType::Authentication);
+	jsonAuthObject.insert("password", password);
+	jsonAuthObject.insert("username", username);
+	if(!jsonAuthObject.empty()) {
+		QString fullAuthString = packMessage(jsonAuthObject);
         sendMsg(fullAuthString);
         //qDebug() << strJson << strJson.length() << fullAuthString;
     }

@@ -30,23 +30,25 @@ public slots:
 private:
 	QDomDocument m_dataDoc;
 	QDomNodeList m_users;
-	QDomElement createNewXmlElement(QString tagName, QString text = "",
-									QString attribute = "", QString value = "");
-
+	QDomElement createNewXmlElement(const QString& tagName,
+									const QString& text = "",
+									const QString& attribute = "",
+									const QString& value = "");
 	const QString DATA_FILE_PATH = QDir::currentPath() + "/data.xml";
 	QHash<QString, QString> m_authData;
 	QHash<QString, QVector<QString>> m_contacts;
 	std::unordered_map<std::string, Client*> m_usernameToClient;
 	bool m_isInitialized;
 	std::string m_errorMessage;
-	bool sendMessageTo(Client*, QJsonObject);
+	bool sendMessageTo(Client*, const QJsonObject &) const;
 
+	bool sendServerMessageTo(QTcpSocket* receipient, const QString& message) const;
 
 	bool auth(const QJsonObject&);
 	void loadData();
-	void saveXMLFile();
-	void addNewContact(QString tmpFrom, QString tmpTo);
-	void createUser(QString pass, QString username);
+	void saveXMLFile() const;
+	void addNewContact(const QString& tmpFrom, const QString& tmpTo);
+	void createUser(const QString& pass, const QString& username);
 };
 
 #endif // SERVER_H

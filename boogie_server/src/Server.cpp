@@ -13,27 +13,7 @@
 
 #include "Server.h"
 #include "client.h"
-
-QString packMessage(QJsonObject dataToSend){
-	QJsonDocument tmp(dataToSend);
-	QString jsonToString{tmp.toJson(QJsonDocument::Compact)};
-	qDebug() << jsonToString;
-	QString strJsonLen = QString::number(jsonToString.length());
-
-	while(strJsonLen.length() < 4)
-		strJsonLen = QString::number(0) + strJsonLen;
-
-	return strJsonLen+jsonToString;
-}
-
-QJsonArray createContactsJson(QVector<QString> contacts){
-	QJsonArray ret;
-	for(auto str : contacts){
-		ret.append(str);
-	}
-	return ret;
-}
-
+#include "../util/util.h"
 
 Server::~Server(){}
 
@@ -41,14 +21,14 @@ Server::Server(quint16 port)
 {
 	m_isInitialized = true;
 	if(port <= 1024){//first 1024 ports are not to be touched
-		m_errorMessage =  "BAD PORT NUMBER";
+		m_errorMessage = "BAD PORT NUMBER";
 		m_isInitialized = false;
 	}
 
 	bool listening = listen(QHostAddress::Any, port);
 	if(listening == false){
 		m_errorMessage = "SERVER ERROR, CAN'T LISTEN ON PORT "
-				+ std::to_string(port);
+						 + std::to_string(port);
 		m_isInitialized = false;
 	}
 
@@ -89,13 +69,10 @@ void Server::loadData(){
 		auto password = currUserNode.firstChildElement("password").text();
 		m_authData[currUsername] = password;
 
-		qDebug() << currUsername << " ima pass " << password;
-
 		//get list of contacts
 		auto contacts = currUserNode.firstChildElement("contacts")
 				.elementsByTagName("contact");
 		for(int j = 0; j < contacts.count(); ++j){
-			qDebug() << "kontakt: " << contacts.at(j).toElement().text() << " \n";
 			m_contacts[currUsername].append(contacts.at(j).toElement().text());
 		}
 	}
@@ -104,7 +81,6 @@ void Server::newConnection(){
 	if(this->hasPendingConnections()){
 		QTcpSocket* client = this->nextPendingConnection();
 
-		//TODO can i do it without these connections?!
 		connect(client, &QTcpSocket::disconnected, this,
 				&Server::userDisconnected);
 		connect(client, &QTcpSocket::readyRead, this, &Server::readMessage);
@@ -123,7 +99,8 @@ void Server::userDisconnected(){
 //	disconnectedClient->deleteLater();
 }
 
-bool Server::sendMessageTo(Client* recepient, QJsonObject message){
+bool Server::sendMessageTo(Client* recepient, const QJsonObject& message) const
+{
 	//TODO write this to some log file i guess
 	QString tmp = packMessage(message);
 	if(recepient->sendMessage(tmp.toLocal8Bit().data()) != -1)
@@ -132,11 +109,21 @@ bool Server::sendMessageTo(Client* recepient, QJsonObject message){
 	else return false;
 }
 
-void Server::saveXMLFile(){
+bool Server::sendServerMessageTo(QTcpSocket* receipient, const QString& message) const
+{
+	QJsonObject response;
+	response.insert("type", MessageType::Server);
+	response.insert("msg", message);
+	qint64 ret = receipient->write(packMessage(response).toLocal8Bit().data());
+	return ret != -1;
+}
+
+void Server::saveXMLFile() const
+{
 	QFile dataFile{DATA_FILE_PATH};
 	if(!dataFile.open(QIODevice::WriteOnly)){
-		qDebug() << "FAILED OPENING OF DATA XML";
-
+		qDebug() << "FAILED OPENING XML DATA";
+		return;
 	}
 	QTextStream output{&dataFile};
 	output << m_dataDoc.toString();
@@ -144,8 +131,10 @@ void Server::saveXMLFile(){
 
 }
 
-QDomElement Server::createNewXmlElement(QString tagName, QString text,
-										QString attribute, QString value){
+QDomElement Server::createNewXmlElement(const QString& tagName,
+										const QString& text,
+										const QString& attribute,
+										const QString& value){
 	QDomElement newElement = m_dataDoc.createElement(tagName);
 	if(text != ""){
 		QDomText newElementText = m_dataDoc.createTextNode(text);
@@ -160,7 +149,7 @@ QDomElement Server::createNewXmlElement(QString tagName, QString text,
 
 //adds contact to array of contacts and to DOM
 //TODO should this add to client as well
-void Server::addNewContact(QString user, QString contact)
+void Server::addNewContact(const QString& user, const QString& contact)
 {
 	m_contacts[user].append(contact);
 
@@ -183,34 +172,30 @@ void Server::readMessage(){
 	if(!std::all_of(
 				messageLength.begin(), messageLength.end(),
 				[](char c){return isdigit(c);})
-			){
+			)
+	{
 		//reading all but not saving it since it is not in valid format
 		senderSocket->readAll();
-		QString errorMessage = "BAD MESSAGE FORMAT, FIRST 4 BYTES ARE NOT NUMBER";
-		QByteArray forSending = (QString::number(errorMessage.length())
-								 + errorMessage).toLocal8Bit().data();
-		senderSocket->write(forSending);
+		sendServerMessageTo(senderSocket,
+							"BAD MESSAGE FORMAT, FIRST 4 BYTES ARE NOT NUMBER");
 		return;
 	}
-
 
 	//reading next messageLength bytes
 	QJsonDocument jsonResponse = QJsonDocument::fromJson(
 				senderSocket->read(messageLength.toInt()));
 	if(jsonResponse.isNull()){
-		QString errorMessage = "BAD MESSAGE FORMAT, APPEARS NOT TO BE JSON";
-		QByteArray forSending = (QString::number(errorMessage.length())
-								 + errorMessage).toLocal8Bit().data();
-		senderSocket->write(forSending);
+		sendServerMessageTo(senderSocket,
+							"BAD MESSAGE FORMAT, APPEARS NOT TO BE JSON");
 		return;
 	}
 	QJsonObject jsonResponseObject = jsonResponse.object();
 
 	//if sent json object is auth object
-	if(jsonResponseObject["type"] == "a"){
+	if(jsonResponseObject["type"] == MessageType::Authentication){
 		if(auth(jsonResponseObject) == false){
 			qDebug() << "BAD PASS";
-			senderSocket->write("BAD PASS");
+			sendServerMessageTo(senderSocket,"BAD PASS");
 			senderSocket->disconnectFromHost();
 		}
 		else{
@@ -219,25 +204,28 @@ void Server::readMessage(){
 			QString tmpUsername = jsonResponseObject["username"].toString();
 			Client *client = new Client(tmpUsername,
 					senderSocket);
-			QJsonObject contactsDataJson;
-			QJsonArray contactsArrayJson = createContactsJson(
-						m_contacts[tmpUsername]);
 
-			//TODO MAKE ENUM!!!!!!!!!
-			contactsDataJson.insert("type","c");
-			contactsDataJson.insert("from","SERVER");
+			QJsonObject contactsDataJson;
+			QJsonArray contactsArrayJson;
+			std::for_each(m_contacts[tmpUsername].begin(),
+						  m_contacts[tmpUsername].end(),
+						  [&contactsArrayJson](QString s){
+								contactsArrayJson.append(s);
+							}
+							);
+
+			contactsDataJson.insert("type", MessageType::Contacts);
 			contactsDataJson.insert("to",tmpUsername);
 			contactsDataJson.insert("contacts", contactsArrayJson);
-
 			sendMessageTo(client, contactsDataJson);
 
 			m_usernameToClient[tmpUsername.toStdString()] =
 					std::move(client);
 		}
 	}
-	//if sent data is message, forward it only to the intended recepient
+	//if sent data is text message, forward it only to the intended recepient
 	//TODO this works only when recepient is online
-	else if(jsonResponseObject["type"] == "m"){
+	else if(jsonResponseObject["type"] == MessageType::Text){
 		QString tmpTo = jsonResponseObject["to"].toString();
 		QString tmpFrom = jsonResponseObject["from"].toString();
 
@@ -250,20 +238,20 @@ void Server::readMessage(){
 			addNewContact(tmpTo, tmpFrom);
 		}
 
-		qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
+		//qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
 		if(m_usernameToClient.find(jsonResponseObject["to"].toString().toStdString())
 				!= m_usernameToClient.end()){
 
-			bool ret = sendMessageTo(m_usernameToClient[tmpTo.toStdString()], jsonResponseObject);
+			bool ret = sendMessageTo(	m_usernameToClient[tmpTo.toStdString()],
+										jsonResponseObject);
 			if(!ret){
-				//send message to sender socket that writing failed
+				qDebug() << "WEIRD! User " << tmpTo << "is not online, afterall";
 			}
 		}
 	}
 }
 
-
-void Server::createUser(QString pass, QString username)
+void Server::createUser(const QString& pass, const QString& username)
 {
 	QDomElement newUser = createNewXmlElement("user", "", "username", username);
 
@@ -282,12 +270,11 @@ void Server::createUser(QString pass, QString username)
 bool Server::auth(const QJsonObject & json){
 	QString username = json["username"].toString();
 	QString pass = json["password"].toString();
-	//if username was allready entered, check password
 
+	//if username exists
 	if(m_authData.contains(username)){
 		return m_authData[username] == pass;
 	}
-
 	//first login, append to file and to current map
 	//TODO create better system for making account
 	else{
@@ -302,3 +289,4 @@ bool Server::isInitialized(){
 void Server::showError(){
 	std::cerr << m_errorMessage << std::endl;
 }
+
