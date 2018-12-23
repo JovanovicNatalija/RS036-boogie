@@ -6,20 +6,29 @@ Page {
     id: root
 
     property string inConversationWith
-    property string from
     property int index : 0
 
     header: ToolBar {
         ToolButton {
-            text: qsTr("Back")
+            text: qsTr("Prikazi prethodne poruke")
+            anchors.right: parent.right
+            anchors.rightMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: {
+                Client.displayOnConvPage(inConversationWith)
+            }
+        }
+
+        ToolButton {
+            text: qsTr("Nazad")
             anchors.left: parent.left
             anchors.leftMargin: 10
             anchors.verticalCenter: parent.verticalCenter
             onClicked: {
-                Client.writeInXml(from)
                 root.StackView.view.pop()
             }
         }
+
         Label {
             id: pageTitle
             text: inConversationWith
@@ -37,10 +46,12 @@ Page {
         onShowMsg: {
             if(inConversationWith === msgFrom) {
                 messageModel.append({message: msg, index : 0})
-                Client.addMsgToBuffer(inConversationWith, inConversationWith, msg)
+            } else if(Client.getUsername() === msgFrom) {
+                messageModel.append({message: msg, index : 1})
             }
         }
     }
+
 
 
     ColumnLayout {
@@ -48,6 +59,7 @@ Page {
 
 
         ListView {
+
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.margins: pane.leftPadding
@@ -86,17 +98,17 @@ Page {
                 TextArea  {
                     id: messageField
                     Layout.fillWidth: true
-                    placeholderText: qsTr("Compose message")
+                    placeholderText: qsTr("Poruka")
                     wrapMode: TextArea.Wrap
                 }
 
                 Button {
                     id: confirmButton
-                    text: qsTr("Confirm")
+                    text: qsTr("Posalji")
                     enabled: messageField.length > 0
                     onClicked: {
-						Client.sendMsgData(from, inConversationWith, messageField.text)
-                        Client.addMsgToBuffer(from, inConversationWith, messageField.text)
+                        Client.sendMsgData(inConversationWith, messageField.text)
+                        Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text)
                         messageModel.append({message: messageField.text, index : 1});
                         messageField.clear()
                     }

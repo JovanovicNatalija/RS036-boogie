@@ -7,14 +7,8 @@ import QtQuick.Window 2.2
 
 Page {
     id: root
-    property string server_ip_address
 
-    signal connectToServer(string ip)
-
-    onConnectToServer:{
-        console.log("poslata ip adresa " + ip )
-    }
-
+    property string serverIpAddress
 
     header: ToolBar {
         Label {
@@ -35,12 +29,12 @@ Page {
 				width: parent.width
 
 				GridLayout{
-					id:glMainLayout
-					columns:2
+                    id: glMainLayout
+                    columns: 2
 
 					Label{
 						id: ipLabel
-						text: qsTr("Server ip address:")
+                        text: qsTr("Adresa servera:")
 						font.pixelSize: 14
 					}
 					TextField {
@@ -51,20 +45,19 @@ Page {
 
 					Label{
 						id: usernameLabel
-						text: qsTr("username:")
+                        text: qsTr("Korisnicko ime:")
 						font.pixelSize: 14
 					}
-
 					TextField {
 						id: usernameField
 						anchors.topMargin: 20
-						placeholderText: qsTr("username")
+                        placeholderText: qsTr("Korisnicko ime")
 						selectByMouse: true
 					}
 
 					Label{
 						id: passwordLabel
-						text: qsTr("password:")
+                        text: qsTr("Sifra:")
 						font.pixelSize: 14
 					}
 					TextField {
@@ -77,20 +70,22 @@ Page {
 
 				Button {
 					id: sendButton
-					text: qsTr("Confirm")
+                    text: qsTr("Potvrdi")
 					enabled: ipField.length > 0 &&
-							 usernameField.length > 0 && passwordField.length > 0
+                             usernameField.length > 0 &&
+                             passwordField.length > 0
 					anchors.horizontalCenter: parent.horizontalCenter
 					onClicked: {
 						root.StackView.view.push(
 									"qrc:/qml/ContactPage.qml",
 									{ username: usernameField.text })
-						Client.connectToServer(ipField.text)
-						Client.sendAuthData(usernameField.text, passwordField.text)
-					}//onClicked
-				}//Button
+                        Client.connectToServer(usernameField.text, ipField.text)
+                        Client.sendAuthData(passwordField.text)
+                        Client.readFromXml()
+                    }
+                }
 
-			}//Column
-		}//Pane
-	}//ColLayout
-}//Page
+            }
+        }
+    }
+}
