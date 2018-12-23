@@ -10,8 +10,8 @@
 #include <QDir>
 #include <ctime>
 #include <tuple>
+#include "../util/util.h"
 
-//ok
 Client::Client(QObject* parrent)
     :QTcpSocket(parrent)
 {
@@ -22,7 +22,6 @@ QString Client::getUsername() {
     return username;
 }
 
-//ok
 void Client::connectToServer(QString username, QString ip, quint16 port) {
     connectToHost(ip, port);
 
@@ -33,13 +32,11 @@ void Client::connectToServer(QString username, QString ip, quint16 port) {
     std::cout << "Connected to host" << std::endl;
 }
 
-//ok
 void Client::disconnectFromServer() {
     disconnectFromHost();
     std::cout << "Disconected from host" << std::endl;
 }
 
-//ok
 void Client::readMsg(){
     QByteArray messageLength = read(4);
     QJsonDocument jsonMsg = QJsonDocument::fromJson(read(messageLength.toInt()));
@@ -52,13 +49,11 @@ void Client::readMsg(){
     }
 }
 
-//ok
 void Client::sendMsg(QString str) {
     write(str.toLocal8Bit().data());
 }
 
 //dodajemo poruku u bafer
-//ok radi ali da li je potrebna ?
 void Client::addMsgToBuffer(QString sender, QString inConversationWith, QString msg) {
     //hvatamo trenutno vreme i pretvaramo ga u string zbog lakseg upisivanja u xml
     auto start = std::chrono::system_clock::now();
@@ -76,7 +71,6 @@ void Client::addMsgToBuffer(QString sender, QString inConversationWith, QString 
     }
 }
 
-//ok
 void Client::displayOnConvPage(QString inConversationWith) {
     auto messages = msgDataBuffer.find(inConversationWith);
     if(messages == msgDataBuffer.end())
@@ -86,7 +80,6 @@ void Client::displayOnConvPage(QString inConversationWith) {
     }
 }
 
-//ok
 void Client::createXml() {
     QString filePath = username + ".xml";
     QFile data(filePath);
@@ -96,6 +89,7 @@ void Client::createXml() {
     QXmlStreamWriter xml(&data);
     xml.setAutoFormatting(true);
     xml.writeStartDocument();
+
     QTextStream stream(&data);
     stream << "\n<messages>\n</messages>";
 
@@ -145,7 +139,6 @@ void Client::writeInXml() {
     counter = 0;
 }
 
-//ok
 void Client::readFromXml() {
     QString filePath = username + ".xml";
 
@@ -180,42 +173,26 @@ void Client::readFromXml() {
 
 //saljemo poruku i podatke o njoj na server
 void Client::sendMsgData(QString to, QString msg) {
-    //pravimo json objekat u koji smestamo podatke
-    QJsonObject json;
-    json.insert("type", "m");
-    json.insert("from", username);
-    json.insert("to", to);
-    json.insert("msg", msg);
-    if(!json.empty()) {
-        //pravimo QJsonDocument objekat da bi mogli da ga transformisemo u string
-        QJsonDocument doc(json);
-        QString strJson(doc.toJson(QJsonDocument::Compact));
-        QString strJsonLen = QString::number(strJson.length());
-        //dodajemo 0 na pocetak stringa do duzine 4
-        while(strJsonLen.length() < 4)
-            strJsonLen = QString::number(0) + strJsonLen;
-        QString fullMsgString = strJsonLen + strJson;
+	QJsonObject jsonMessageObject;
+	jsonMessageObject.insert("type", MessageType::Text);
+    jsonMessageObject.insert("from", username);
+	jsonMessageObject.insert("to", to);
+	jsonMessageObject.insert("msg", msg);
+	if(!jsonMessageObject.empty()) {
+		QString fullMsgString = packMessage(jsonMessageObject);
         sendMsg(fullMsgString);
-		//qDebug() << strJs << strJs.length() << fullMsgString;
     }
 }
 
 //saljemo podatke za proveru username i sifre na server
 void Client::sendAuthData(QString password){
-    QJsonObject json;
+    QJsonObject jsonAuthObject;
     //pravimo json objekat u koji smestamo podatke
-    json.insert("type", "a");
-    json.insert("password", password);
-    json.insert("username", username);
-    if(!json.empty()) {
-        //pravimo QJsonDocument objekat da bi mogli da ga transformisemo u string
-        QJsonDocument doc(json);
-        QString strJson(doc.toJson(QJsonDocument::Compact));
-        QString strJsonLen = QString::number(strJson.length());
-        //dodajemo 0 na pocetak stringa do duzine 4
-        while(strJsonLen.length() < 4)
-            strJsonLen = QString::number(0) + strJsonLen;
-        QString fullAuthString = strJsonLen + strJson;
+	jsonAuthObject.insert("type", MessageType::Authentication);
+	jsonAuthObject.insert("password", password);
+	jsonAuthObject.insert("username", username);
+	if(!jsonAuthObject.empty()) {
+		QString fullAuthString = packMessage(jsonAuthObject);
         sendMsg(fullAuthString);
         //qDebug() << strJson << strJson.length() << fullAuthString;
     }
