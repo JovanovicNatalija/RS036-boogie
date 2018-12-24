@@ -18,7 +18,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += src/main.cpp
 SOURCES += src/Server.cpp
-SOURCES += src/client.cpp
+
 SOURCES += ../util/util.cpp
 
 # Default rules for deployment.
@@ -27,7 +27,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += includes/Server.h
-HEADERS += includes/client.h
+
 HEADERS += ../util/util.h
 
 

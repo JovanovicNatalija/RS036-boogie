@@ -12,7 +12,6 @@
 #include <iostream>
 
 #include "Server.h"
-#include "client.h"
 #include "../util/util.h"
 
 Server::~Server(){}
@@ -91,29 +90,37 @@ void Server::newConnection(){
 
 void Server::userDisconnected(){
 
-//	QTcpSocket *disconnectedClient = qobject_cast<QTcpSocket *>(QObject::sender());
-//	auto username = m_usernameToSocket.key(disconnectedClient);//linear time but its called rarely so its ok
-//	m_usernameToSocket.remove(username);
-//	qDebug() << "User " << username << " OUT";
+	QTcpSocket *disconnectedClient = qobject_cast<QTcpSocket *>(QObject::sender());
+	auto username = m_usernameToSocket.key(disconnectedClient);//linear time but its called rarely so its ok
+	if(username == ""){
+		qDebug() << "WHOOPS! Disconected signal came from socket that was not connected.CHECK!";
+		return;
+	}
+	m_usernameToSocket.remove(username);
 
-//	disconnectedClient->deleteLater();
+	qDebug() << "User " << username << " OUT";
+	disconnectedClient->deleteLater();
 }
 
-bool Server::sendMessageTo(Client* recepient, const QJsonObject& message) const
+bool Server::sendMessageTo(QTcpSocket* recepient, const QJsonObject& message) const
 {
 	//TODO write this to some log file i guess
 	QString tmp = packMessage(message);
-	if(recepient->sendMessage(tmp.toLocal8Bit().data()) != -1)
+	if(recepient->write(tmp.toLocal8Bit().data()) != -1)
 		return true;
 
 	else return false;
 }
 
-bool Server::sendServerMessageTo(QTcpSocket* receipient, const QString& message) const
+bool Server::sendServerMessageTo(QTcpSocket* receipient, const QString& message
+								 , const QString& username) const
 {
 	QJsonObject response;
 	response.insert("type", MessageType::Server);
 	response.insert("msg", message);
+	if(username != ""){
+		response.insert("to", username);
+	}
 	qint64 ret = receipient->write(packMessage(response).toLocal8Bit().data());
 	return ret != -1;
 }
@@ -148,7 +155,6 @@ QDomElement Server::createNewXmlElement(const QString& tagName,
 }
 
 //adds contact to array of contacts and to DOM
-//TODO should this add to client as well
 void Server::addNewContact(const QString& user, const QString& contact)
 {
 	m_contacts[user].append(contact);
@@ -202,8 +208,6 @@ void Server::readMessage(){
 			qDebug() << "AUTH SUCCESSFUL";
 			//helper var, just for nicer code;
 			QString tmpUsername = jsonResponseObject["username"].toString();
-			Client *client = new Client(tmpUsername,
-					senderSocket);
 
 			QJsonObject contactsDataJson;
 			QJsonArray contactsArrayJson;
@@ -217,10 +221,9 @@ void Server::readMessage(){
 			contactsDataJson.insert("type", MessageType::Contacts);
 			contactsDataJson.insert("to",tmpUsername);
 			contactsDataJson.insert("contacts", contactsArrayJson);
-			sendMessageTo(client, contactsDataJson);
+			sendMessageTo(senderSocket, contactsDataJson);
 
-			m_usernameToClient[tmpUsername.toStdString()] =
-					std::move(client);
+			m_usernameToSocket[tmpUsername] = senderSocket;
 		}
 	}
 	//if sent data is text message, forward it only to the intended recepient
@@ -239,10 +242,9 @@ void Server::readMessage(){
 		}
 
 		//qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
-		if(m_usernameToClient.find(jsonResponseObject["to"].toString().toStdString())
-				!= m_usernameToClient.end()){
+		if(m_usernameToSocket.contains(jsonResponseObject["to"].toString())){
 
-			bool ret = sendMessageTo(	m_usernameToClient[tmpTo.toStdString()],
+			bool ret = sendMessageTo(	m_usernameToSocket[tmpTo],
 										jsonResponseObject);
 			if(!ret){
 				qDebug() << "WEIRD! User " << tmpTo << "is not online, afterall";
