@@ -313,10 +313,10 @@ bool Server::auth(const QJsonObject & json){
 	}
 }
 
-bool Server::isInitialized(){
+bool Server::isInitialized() const{
 	return m_isInitialized;
 }
-void Server::showError(){
+void Server::showError() const{
 	std::cerr << m_errorMessage << std::endl;
 }
 

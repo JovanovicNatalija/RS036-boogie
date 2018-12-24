@@ -18,8 +18,8 @@ class Server : public QTcpServer
 	Q_OBJECT
 public:
 	Server(quint16 port);
-	bool isInitialized();
-	void showError();
+	bool isInitialized() const;
+	void showError() const;
 	~Server();
 
 public slots:
@@ -39,6 +39,7 @@ private:
 	QHash<QString, QString> m_authData;
 	QHash<QString, QVector<QString>> m_contacts;
 	QHash<QString, QTcpSocket*> m_usernameToSocket;
+
 	bool m_isInitialized;
 	std::string m_errorMessage;
 
