@@ -88,15 +88,33 @@ void Server::newConnection(){
 	}
 }
 
+void Server::notifyContacts(const QString& username, const MessageType& m) const
+{
+	for(auto user : m_contacts[username]){
+		QTcpSocket* tmp = m_usernameToSocket[user];
+		if(tmp == nullptr)//contact not online
+			continue;
+		QJsonObject notification;
+		notification.insert("type", setMessageType(m));
+		notification.insert("to", user);
+		notification.insert("contact", username);
+		sendMessageTo(tmp, notification);
+	}
+}
+
+
 void Server::userDisconnected(){
 
 	QTcpSocket *disconnectedClient = qobject_cast<QTcpSocket *>(QObject::sender());
-	auto username = m_usernameToSocket.key(disconnectedClient);//linear time but its called rarely so its ok
+	QString username = m_usernameToSocket.key(disconnectedClient);//linear time but its called rarely so its ok
 	if(username == ""){
 		qDebug() << "WHOOPS! Disconected signal came from socket that was not connected.CHECK!";
 		return;
 	}
 	m_usernameToSocket.remove(username);
+
+	//notify all contacts that user is offline
+	notifyContacts(username, MessageType::ContactLogout);
 
 	qDebug() << "User " << username << " OUT";
 	disconnectedClient->deleteLater();
@@ -116,7 +134,7 @@ bool Server::sendServerMessageTo(QTcpSocket* receipient, const QString& message
 								 , const QString& username) const
 {
 	QJsonObject response;
-	response.insert("type", MessageType::Server);
+	response.insert("type", setMessageType(MessageType::Server));
 	response.insert("msg", message);
 	if(username != ""){
 		response.insert("to", username);
@@ -213,15 +231,20 @@ void Server::readMessage(){
 			QJsonArray contactsArrayJson;
 			std::for_each(m_contacts[tmpUsername].begin(),
 						  m_contacts[tmpUsername].end(),
-						  [&contactsArrayJson](QString s){
-								contactsArrayJson.append(s);
+						  [&](QString s){
+								QJsonObject tmp;
+								tmp.insert("contact", s);
+								tmp.insert("online", m_usernameToSocket.contains(s));
+								contactsArrayJson.append(tmp);
 							}
 							);
 
-			contactsDataJson.insert("type", MessageType::Contacts);
+			contactsDataJson.insert("type", setMessageType(MessageType::Contacts));
 			contactsDataJson.insert("to",tmpUsername);
 			contactsDataJson.insert("contacts", contactsArrayJson);
 			sendMessageTo(senderSocket, contactsDataJson);
+
+			notifyContacts(tmpUsername, MessageType::ContactLogin);
 
 			m_usernameToSocket[tmpUsername] = senderSocket;
 		}

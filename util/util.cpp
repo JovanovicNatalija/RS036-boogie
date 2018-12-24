@@ -15,3 +15,12 @@ QString packMessage(const QJsonObject& dataToSend){
 
 	return strJsonLen+jsonToString;
 }
+
+QJsonValue setMessageType(const MessageType& type){
+	return QJsonValue(static_cast<int>(type));
+}
+
+bool operator==(const QJsonValue &v, const MessageType& type){
+	return v.toInt() == static_cast<int>(type);
+}
+

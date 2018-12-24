@@ -1,6 +1,7 @@
 #include <QCoreApplication>
 
 #include "Server.h"
+
 #include <QObject>
 
 int main(int argc, char *argv[])

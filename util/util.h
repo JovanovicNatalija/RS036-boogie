@@ -1,11 +1,16 @@
 #ifndef UTIL_H
 #define UTIL_H
+
 #include <QString>
 #include <QJsonObject>
 
 
 QString packMessage(const QJsonObject& dataToSend);
 
-enum MessageType : int {Authentication = 1, Text, Contacts, Server};
+enum class MessageType : int {Authentication = 1, Text, Contacts, ContactLogout,
+							  ContactLogin, Server};
+bool operator==(const QJsonValue &v, const MessageType& type);
+
+QJsonValue setMessageType(const MessageType& type);
 
 #endif // UTIL_H

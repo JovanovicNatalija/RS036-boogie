@@ -3,13 +3,14 @@
 
 #include <unordered_map>
 
+#include "../util/util.h"
+
 #include <QFile>
 #include <QDir>
 
 #include <QTcpServer>
 
 #include <QDomDocument>
-
 
 
 class Server : public QTcpServer
@@ -51,6 +52,7 @@ private:
 	void saveXMLFile() const;
 	void addNewContact(const QString& tmpFrom, const QString& tmpTo);
 	void createUser(const QString& pass, const QString& username);
+	void notifyContacts(const QString& username, const MessageType& m) const;
 };
 
 #endif // SERVER_H

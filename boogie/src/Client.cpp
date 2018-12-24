@@ -41,10 +41,11 @@ void Client::readMsg(){
     QByteArray messageLength = read(4);
     QJsonDocument jsonMsg = QJsonDocument::fromJson(read(messageLength.toInt()));
     QJsonObject jsonMsgObj = jsonMsg.object();
+
     if(jsonMsgObj["to"].toString() != username) {
         qDebug() << "Received msg is not for " << username;
     } else {
-        addMsgToBuffer(jsonMsgObj["from"].toString(), jsonMsgObj["from"].toString(), jsonMsgObj["msg"].toString());
+		addMsgToBuffer(jsonMsgObj["from"].toString(), jsonMsgObj["from"].toString(),jsonMsgObj["msg"].toString());
         emit showMsg(jsonMsgObj["from"].toString(), jsonMsgObj["msg"].toString());
     }
 }
@@ -170,11 +171,10 @@ void Client::readFromXml() {
     data.close();
 }
 
-
 //saljemo poruku i podatke o njoj na server
 void Client::sendMsgData(QString to, QString msg) {
 	QJsonObject jsonMessageObject;
-	jsonMessageObject.insert("type", MessageType::Text);
+	jsonMessageObject.insert("type", setMessageType(MessageType::Text));
     jsonMessageObject.insert("from", username);
 	jsonMessageObject.insert("to", to);
 	jsonMessageObject.insert("msg", msg);
@@ -188,7 +188,7 @@ void Client::sendMsgData(QString to, QString msg) {
 void Client::sendAuthData(QString password){
     QJsonObject jsonAuthObject;
     //pravimo json objekat u koji smestamo podatke
-	jsonAuthObject.insert("type", MessageType::Authentication);
+	jsonAuthObject.insert("type", setMessageType(MessageType::Authentication));
 	jsonAuthObject.insert("password", password);
 	jsonAuthObject.insert("username", username);
 	if(!jsonAuthObject.empty()) {
