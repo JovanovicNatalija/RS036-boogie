@@ -217,7 +217,12 @@ void Server::readMessage(){
 
 	//if sent json object is auth object
 	if(jsonResponseObject["type"] == MessageType::Authentication){
-		if(auth(jsonResponseObject) == false){
+		if(m_usernameToSocket.contains(jsonResponseObject["username"].toString())){
+			qDebug() << "ALLREADY LOGGED IN";
+			sendServerMessageTo(senderSocket,"ALLREADY LOGGED IN");
+			senderSocket->disconnectFromHost();
+		}
+		else if(auth(jsonResponseObject) == false){
 			qDebug() << "BAD PASS";
 			sendServerMessageTo(senderSocket,"BAD PASS");
 			senderSocket->disconnectFromHost();
