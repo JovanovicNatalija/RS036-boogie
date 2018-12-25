@@ -4,7 +4,7 @@ import QtQuick.Layouts 1.3
 import QtQuick.Controls.Material 2.1
 import QtQuick.Controls 2.4
 import QtQuick.Window 2.2
-
+import QtQuick 2.11
 Page {
     id: root
 
@@ -67,6 +67,16 @@ Page {
 						selectByMouse: true
 					}
 				}
+                Keys.onPressed: {
+                    if(event.key === Qt.Key_Return ){
+                        root.StackView.view.push(
+                                    "qrc:/qml/ContactPage.qml",
+                                    { username: usernameField.text })
+                        Client.connectToServer(usernameField.text, ipField.text)
+                        Client.sendAuthData(passwordField.text)
+                        Client.readFromXml()
+                    }
+                }
 
 				Button {
 					id: sendButton

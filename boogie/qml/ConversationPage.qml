@@ -100,7 +100,16 @@ Page {
                     Layout.fillWidth: true
                     placeholderText: qsTr("Poruka")
                     wrapMode: TextArea.Wrap
+                    Keys.onPressed: {
+                        if(event.key === Qt.Key_Return ){
+                            Client.sendMsgData(inConversationWith, messageField.text)
+                            Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text)
+                            messageModel.append({message: messageField.text, index : 1});
+                            messageField.clear()
+                        }
+                    }
                 }
+
 
                 Button {
                     id: confirmButton

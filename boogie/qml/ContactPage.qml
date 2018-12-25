@@ -1,5 +1,6 @@
 import QtQuick 2.6
 import QtQuick.Controls 2.1
+import QtQuick.Layouts 1.3
 
 Page {
     id: root
@@ -11,6 +12,16 @@ Page {
             anchors.centerIn: parent
         }
     }
+    ListModel{
+        id: contactModel
+    }
+
+    Connections {
+        target: Client
+        onShowContacts: {
+            contactModel.append({con:contact, index: online})
+        }
+    }
 
     ListView{
         id: listView
@@ -20,14 +31,23 @@ Page {
         bottomMargin: 48
         rightMargin: 48
         spacing: 20
-        model: ["Natalija Jovanovic", "Vuk Novakovic", "Nikola Milovanovic"]
+        model: contactModel
         delegate: ItemDelegate {
-            text: modelData
+            Rectangle {
+                 width: 10
+                 height: width
+                 color: { index ? "green" : "red" }
+                 border.color: "black"
+                 border.width: 1
+                 radius: width*0.5
+            }
+            text: model.con
             width: listView.width - listView.leftMargin - listView.rightMargin
             onClicked: {
-                root.StackView.view.push("qrc:/qml/ConversationPage.qml", { inConversationWith: modelData })
+                root.StackView.view.push("qrc:/qml/ConversationPage.qml", { inConversationWith: model.con })
             }
         }
+
 
     }
 }

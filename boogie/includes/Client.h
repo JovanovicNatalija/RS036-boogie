@@ -28,6 +28,7 @@ public:
 
 signals:
     void showMsg(QString msgFrom, QString msg);
+    void showContacts(QString contact, bool online);
     Q_INVOKABLE void pushConvPage(QString);
     //void aboutToClose();
 

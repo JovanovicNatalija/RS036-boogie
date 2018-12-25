@@ -2,6 +2,7 @@
 #include <iostream>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QString>
 #include <utility>
 #include <iterator>
@@ -44,11 +45,18 @@ void Client::readMsg(){
 
     if(jsonMsgObj["to"].toString() != username) {
         qDebug() << "Received msg is not for " << username;
-    } else {
+    } else if (jsonMsgObj.contains("msg")){
 		addMsgToBuffer(jsonMsgObj["from"].toString(), jsonMsgObj["from"].toString(),jsonMsgObj["msg"].toString());
         emit showMsg(jsonMsgObj["from"].toString(), jsonMsgObj["msg"].toString());
+    } else if (jsonMsgObj.contains("contacts")) {
+        QJsonArray contactsJsonArray = jsonMsgObj["contacts"].toArray();
+        for(auto con : contactsJsonArray){
+            QJsonObject jsonObj = con.toObject();
+            emit showContacts(jsonObj["contact"].toString(), jsonObj["online"].toBool());
+        }
     }
 }
+
 
 void Client::sendMsg(QString str) {
     write(str.toLocal8Bit().data());
@@ -80,6 +88,7 @@ void Client::displayOnConvPage(QString inConversationWith) {
         emit showMsg(std::get<0>(message), std::get<1>(message));
     }
 }
+
 
 void Client::createXml() {
     QString filePath = username + ".xml";
