@@ -92,7 +92,6 @@ void Server::newConnection(){
 				&Server::userDisconnected);
 		connect(client, &QTcpSocket::readyRead, this, &Server::readMessage);
 
-		qDebug("User connected");
 	}
 }
 
@@ -236,9 +235,10 @@ void Server::authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSo
 		senderSocket->disconnectFromHost();
 	}
 	else{
-		qDebug() << "AUTH SUCCESSFUL";
 		//helper var, just for nicer code;
 		QString tmpUsername = jsonResponseObject["username"].toString();
+
+		qDebug() << "AUTH FOR USER " << tmpUsername << " SUCCESSFUL";
 
 		sendContactsFor(tmpUsername, senderSocket);
 		notifyContacts(tmpUsername, MessageType::ContactLogin);
