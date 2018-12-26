@@ -138,8 +138,8 @@ bool Server::sendServerMessageTo(QTcpSocket* receipient, const MessageType& msgT
 	if(username != ""){
 		response.insert("to", username);
 	}
-	qint64 ret = receipient->write(packMessage(response).toLocal8Bit().data());
-	return ret != -1;
+	return -1 != receipient->write(packMessage(response).toLocal8Bit().data());
+
 }
 
 void Server::saveXMLFile() const
@@ -152,6 +152,7 @@ void Server::saveXMLFile() const
 	QTextStream output{&dataFile};
 	output << m_dataDoc.toString();
 	qDebug() << "FILE SAVED";
+	//QFile is RAII, no need to close file
 
 }
 
@@ -176,8 +177,10 @@ void Server::addNewContact(const QString& user, const QString& contact)
 {
 	m_contacts[user].append(contact);
 
+	//first user in xml
 	auto userDomElement = m_users.at(0);
 	int i = 1;
+	//find dom element for given user
 	while(userDomElement.attributes().namedItem("username").nodeValue()
 			!= user){
 		userDomElement = m_users.at(i++);
@@ -187,71 +190,108 @@ void Server::addNewContact(const QString& user, const QString& contact)
 	saveXMLFile();
 }
 
+bool isNumeric(QByteArray arr){
+	return std::all_of(arr.begin(), arr.end(),
+					   [](char c){return isdigit(c);});
+}
+
+void Server::sendContactsFor(QString username, QTcpSocket* senderSocket)
+{
+	QJsonObject contactsDataJson;
+	QJsonArray contactsArrayJson;
+	std::for_each(m_contacts[username].begin(),
+				  m_contacts[username].end(),
+				  [&](QString s){
+						QJsonObject tmp;
+						tmp.insert("contact", s);
+						tmp.insert("online", m_usernameToSocket.contains(s));
+						contactsArrayJson.append(tmp);
+					}
+					);
+
+	contactsDataJson.insert("type", setMessageType(MessageType::Contacts));
+	contactsDataJson.insert("to",username);
+	contactsDataJson.insert("contacts", contactsArrayJson);
+	sendMessageTo(senderSocket, contactsDataJson);
+}
+
+void Server::authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSocket)
+{
+	if(m_usernameToSocket.contains(jsonResponseObject["username"].toString())){
+		qDebug() << "ALLREADY LOGGED IN";
+		sendServerMessageTo(senderSocket,MessageType::AllreadyLoggedIn);
+		senderSocket->disconnectFromHost();
+	}
+	else if(checkPassword(jsonResponseObject) == false){
+		qDebug() << "BAD PASS";
+		sendServerMessageTo(senderSocket,MessageType::BadPass);
+		senderSocket->disconnectFromHost();
+	}
+	else{
+		qDebug() << "AUTH SUCCESSFUL";
+		//helper var, just for nicer code;
+		QString tmpUsername = jsonResponseObject["username"].toString();
+
+		sendContactsFor(tmpUsername, senderSocket);
+		notifyContacts(tmpUsername, MessageType::ContactLogin);
+		m_usernameToSocket[tmpUsername] = senderSocket;
+	}
+}
+
+void Server::checkContactExistence(QString tmpFrom, QString tmpTo)
+{
+	if(!m_contacts[tmpFrom].contains(tmpTo)){
+		addNewContact(tmpFrom, tmpTo);
+	}
+	if(!m_contacts[tmpTo].contains(tmpFrom)){
+		addNewContact(tmpTo, tmpFrom);
+	}
+}
+
+void Server::forwardMessage(const QString& to, const QJsonObject& message)const
+{
+	bool ret = sendMessageTo(	m_usernameToSocket[to],
+								message);
+	if(!ret){
+		qDebug() << "WEIRD! User " << to << "is not online, afterall";
+	}
+}
+
+bool Server::isOnline(QString username) const
+{
+	return m_usernameToSocket.contains(username);
+}
+
 void Server::readMessage(){
 	QTcpSocket* senderSocket = qobject_cast<QTcpSocket*>(sender());
 
-	//reading first 4 characters, they represent length of message
+	//reading first 4 characters, they represent length of json encoded message
 	QByteArray messageLength = senderSocket->read(4);
-	if(!std::all_of(
-				messageLength.begin(), messageLength.end(),
-				[](char c){return isdigit(c);})
-			)
+
+	//check if sent data represents a number
+	if(!isNumeric(messageLength))
 	{
 		//reading all but not saving it since it is not in valid format
 		senderSocket->readAll();
-		sendServerMessageTo(senderSocket,
-							MessageType::BadMessageFormat);
+		sendServerMessageTo(senderSocket, MessageType::BadMessageFormat);
 		return;
 	}
 
 	//reading next messageLength bytes
 	QJsonDocument jsonResponse = QJsonDocument::fromJson(
 				senderSocket->read(messageLength.toInt()));
+
+	//check if message is in valid json format
 	if(jsonResponse.isNull()){
-		sendServerMessageTo(senderSocket,
-							MessageType::BadMessageFormat);
+		sendServerMessageTo(senderSocket, MessageType::BadMessageFormat);
 		return;
 	}
+
 	QJsonObject jsonResponseObject = jsonResponse.object();
 
 	//if sent json object is auth object
 	if(jsonResponseObject["type"] == MessageType::Authentication){
-		if(m_usernameToSocket.contains(jsonResponseObject["username"].toString())){
-			qDebug() << "ALLREADY LOGGED IN";
-			sendServerMessageTo(senderSocket,MessageType::AllreadyLoggedIn);
-			senderSocket->disconnectFromHost();
-		}
-		else if(auth(jsonResponseObject) == false){
-			qDebug() << "BAD PASS";
-			sendServerMessageTo(senderSocket,MessageType::BadPass);
-			senderSocket->disconnectFromHost();
-		}
-		else{
-			qDebug() << "AUTH SUCCESSFUL";
-			//helper var, just for nicer code;
-			QString tmpUsername = jsonResponseObject["username"].toString();
-
-			QJsonObject contactsDataJson;
-			QJsonArray contactsArrayJson;
-			std::for_each(m_contacts[tmpUsername].begin(),
-						  m_contacts[tmpUsername].end(),
-						  [&](QString s){
-								QJsonObject tmp;
-								tmp.insert("contact", s);
-								tmp.insert("online", m_usernameToSocket.contains(s));
-								contactsArrayJson.append(tmp);
-							}
-							);
-
-			contactsDataJson.insert("type", setMessageType(MessageType::Contacts));
-			contactsDataJson.insert("to",tmpUsername);
-			contactsDataJson.insert("contacts", contactsArrayJson);
-			sendMessageTo(senderSocket, contactsDataJson);
-
-			notifyContacts(tmpUsername, MessageType::ContactLogin);
-
-			m_usernameToSocket[tmpUsername] = senderSocket;
-		}
+		authentication(jsonResponseObject, senderSocket);
 	}
 	//if sent data is text message, forward it only to the intended recepient
 	//TODO this works only when recepient is online
@@ -259,23 +299,14 @@ void Server::readMessage(){
 		QString tmpTo = jsonResponseObject["to"].toString();
 		QString tmpFrom = jsonResponseObject["from"].toString();
 
-		//Contact creation
-		//TODO This will be changed later
-		if(!m_contacts[tmpFrom].contains(tmpTo)){
-			addNewContact(tmpFrom, tmpTo);
-		}
-		if(!m_contacts[tmpTo].contains(tmpFrom)){
-			addNewContact(tmpTo, tmpFrom);
-		}
+		checkContactExistence(tmpFrom, tmpTo);
 
 		//qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
-		if(m_usernameToSocket.contains(jsonResponseObject["to"].toString())){
-
-			bool ret = sendMessageTo(	m_usernameToSocket[tmpTo],
-										jsonResponseObject);
-			if(!ret){
-				qDebug() << "WEIRD! User " << tmpTo << "is not online, afterall";
-			}
+		if(isOnline(tmpTo)){
+			forwardMessage(tmpTo, jsonResponseObject);
+		}
+		else{
+			//TODO
 		}
 	}
 }
@@ -296,7 +327,7 @@ void Server::createUser(const QString& pass, const QString& username)
 	saveXMLFile();
 }
 
-bool Server::auth(const QJsonObject & json){
+bool Server::checkPassword(const QJsonObject & json){
 	QString username = json["username"].toString();
 	QString pass = json["password"].toString();
 
@@ -318,4 +349,3 @@ bool Server::isInitialized() const{
 void Server::showError() const{
 	std::cerr << m_errorMessage << std::endl;
 }
-

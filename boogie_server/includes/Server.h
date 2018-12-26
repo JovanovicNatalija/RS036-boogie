@@ -22,6 +22,8 @@ public:
 	void showError() const;
 	~Server();
 
+	void sendContacts(QString tmpUsername, QTcpSocket* senderSocket);
+
 public slots:
 	void newConnection();
 	void userDisconnected();
@@ -47,13 +49,17 @@ private:
 	bool sendServerMessageTo(QTcpSocket* receipient, const MessageType& msgType
 										,const QString& username = "") const;
 
-	bool auth(const QJsonObject&);
+	bool checkPassword(const QJsonObject&);
 	void loadData();
 
 	void saveXMLFile() const;
 	void addNewContact(const QString& tmpFrom, const QString& tmpTo);
 	void createUser(const QString& pass, const QString& username);
 	void notifyContacts(const QString& username, const MessageType& m) const;
+	void authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSocket);
+	void checkContactExistence(QString tmpFrom, QString tmpTo);
+	void forwardMessage(const QString& to, const QJsonObject& message) const;
+	bool isOnline(QString username) const;
 };
 
 #endif // SERVER_H
