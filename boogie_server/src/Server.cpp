@@ -211,16 +211,15 @@ void Server::sendContactsFor(QString username, QTcpSocket* senderSocket) const
 {
 	QJsonObject contactsDataJson;
 	QJsonArray contactsArrayJson;
-	std::for_each(m_contacts[username].begin(),
-				  m_contacts[username].end(),
-				  [&](QString s){
-						QJsonObject tmp;
-						tmp.insert("contact", s);
-						tmp.insert("online", m_usernameToSocket.contains(s));
-						contactsArrayJson.append(tmp);
-					}
-					);
-
+	std::transform(m_contacts[username].begin(),
+				   m_contacts[username].end(),
+				   std::back_insert_iterator<QJsonArray>(contactsArrayJson),
+				   [&](QString s){
+						return QJsonObject({
+											{"contact", s},
+											{"online", isOnline(s)}
+										   });
+					});
 	contactsDataJson.insert("type", setMessageType(MessageType::Contacts));
 	contactsDataJson.insert("to",username);
 	contactsDataJson.insert("contacts", contactsArrayJson);
