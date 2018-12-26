@@ -22,7 +22,7 @@ public:
 	void showError() const;
 	~Server();
 
-	void sendContacts(QString tmpUsername, QTcpSocket* senderSocket);
+
 
 public slots:
 	void newConnection();
@@ -56,6 +56,7 @@ private:
 	void addNewContact(const QString& tmpFrom, const QString& tmpTo);
 	void createUser(const QString& pass, const QString& username);
 	void notifyContacts(const QString& username, const MessageType& m) const;
+	void sendContactsFor(QString username, QTcpSocket* senderSocket) const;
 	void authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSocket);
 	void checkContactExistence(QString tmpFrom, QString tmpTo);
 	void forwardMessage(const QString& to, const QJsonObject& message) const;

@@ -195,7 +195,7 @@ bool isNumeric(QByteArray arr){
 					   [](char c){return isdigit(c);});
 }
 
-void Server::sendContactsFor(QString username, QTcpSocket* senderSocket)
+void Server::sendContactsFor(QString username, QTcpSocket* senderSocket) const
 {
 	QJsonObject contactsDataJson;
 	QJsonArray contactsArrayJson;
