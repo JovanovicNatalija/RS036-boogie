@@ -47,6 +47,14 @@ void Server::loadData(){
 		return;
 	}
 	else{
+		//if file is empty, intialize it with empty xml tag so that setContent
+		//would'nt fail
+		if(dataFile.size() == 0){
+			dataFile.write("<xml></xml>");
+			dataFile.flush();
+			dataFile.close();
+			dataFile.open(QIODevice::ReadWrite | QIODevice::Text);
+		}
 		if(!m_dataDoc.setContent(&dataFile)){
 			qDebug() << "LOADING FILE AT " + DATA_FILE_PATH + " FAILED";
 			m_errorMessage = "LOADING DATA FILE FAILED";
