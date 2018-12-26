@@ -130,12 +130,11 @@ bool Server::sendMessageTo(QTcpSocket* recepient, const QJsonObject& message) co
 	else return false;
 }
 
-bool Server::sendServerMessageTo(QTcpSocket* receipient, const QString& message
+bool Server::sendServerMessageTo(QTcpSocket* receipient, const MessageType& msgType
 								 , const QString& username) const
 {
 	QJsonObject response;
-	response.insert("type", setMessageType(MessageType::Server));
-	response.insert("msg", message);
+	response.insert("type", setMessageType(msgType));
 	if(username != ""){
 		response.insert("to", username);
 	}
@@ -201,7 +200,7 @@ void Server::readMessage(){
 		//reading all but not saving it since it is not in valid format
 		senderSocket->readAll();
 		sendServerMessageTo(senderSocket,
-							"BAD MESSAGE FORMAT, FIRST 4 BYTES ARE NOT NUMBER");
+							MessageType::BadMessageFormat);
 		return;
 	}
 
@@ -210,7 +209,7 @@ void Server::readMessage(){
 				senderSocket->read(messageLength.toInt()));
 	if(jsonResponse.isNull()){
 		sendServerMessageTo(senderSocket,
-							"BAD MESSAGE FORMAT, APPEARS NOT TO BE JSON");
+							MessageType::BadMessageFormat);
 		return;
 	}
 	QJsonObject jsonResponseObject = jsonResponse.object();
@@ -219,12 +218,12 @@ void Server::readMessage(){
 	if(jsonResponseObject["type"] == MessageType::Authentication){
 		if(m_usernameToSocket.contains(jsonResponseObject["username"].toString())){
 			qDebug() << "ALLREADY LOGGED IN";
-			sendServerMessageTo(senderSocket,"ALLREADY LOGGED IN");
+			sendServerMessageTo(senderSocket,MessageType::AllreadyLoggedIn);
 			senderSocket->disconnectFromHost();
 		}
 		else if(auth(jsonResponseObject) == false){
 			qDebug() << "BAD PASS";
-			sendServerMessageTo(senderSocket,"BAD PASS");
+			sendServerMessageTo(senderSocket,MessageType::BadPass);
 			senderSocket->disconnectFromHost();
 		}
 		else{

@@ -44,7 +44,7 @@ private:
 	std::string m_errorMessage;
 
 	bool sendMessageTo(QTcpSocket* recepient, const QJsonObject& message) const;
-	bool sendServerMessageTo(QTcpSocket* receipient, const QString& message
+	bool sendServerMessageTo(QTcpSocket* receipient, const MessageType& msgType
 										,const QString& username = "") const;
 
 	bool auth(const QJsonObject&);

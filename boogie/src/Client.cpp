@@ -42,19 +42,47 @@ void Client::readMsg(){
     QByteArray messageLength = read(4);
     QJsonDocument jsonMsg = QJsonDocument::fromJson(read(messageLength.toInt()));
     QJsonObject jsonMsgObj = jsonMsg.object();
+	auto msgType = jsonMsgObj["type"];
 
-    if(jsonMsgObj["to"].toString() != username) {
-        qDebug() << "Received msg is not for " << username;
-    } else if (jsonMsgObj.contains("msg")){
-		addMsgToBuffer(jsonMsgObj["from"].toString(), jsonMsgObj["from"].toString(),jsonMsgObj["msg"].toString());
-        emit showMsg(jsonMsgObj["from"].toString(), jsonMsgObj["msg"].toString());
-    } else if (jsonMsgObj.contains("contacts")) {
-        QJsonArray contactsJsonArray = jsonMsgObj["contacts"].toArray();
-        for(auto con : contactsJsonArray){
-            QJsonObject jsonObj = con.toObject();
-            emit showContacts(jsonObj["contact"].toString(), jsonObj["online"].toBool());
-        }
-    }
+	if(jsonMsgObj["to"].toString() != username) {
+		qDebug() << "Received msg is not for " << username;
+		return;
+	}
+	if(msgType == MessageType::Text){
+		addMsgToBuffer(jsonMsgObj["from"].toString(),
+						jsonMsgObj["from"].toString(),
+						jsonMsgObj["msg"].toString());
+
+		emit showMsg(jsonMsgObj["from"].toString(),
+					jsonMsgObj["msg"].toString());
+	}
+	else if(msgType == MessageType::Contacts){
+		QJsonArray contactsJsonArray = jsonMsgObj["contacts"].toArray();
+		for(auto con : contactsJsonArray){
+			QJsonObject jsonObj = con.toObject();
+			emit showContacts(jsonObj["contact"].toString(), jsonObj["online"].toBool());
+		}
+	}
+	else if(msgType == MessageType::ContactLogin){
+		//TODO
+	}
+	else if(msgType == MessageType::ContactLogout){
+		//TODO
+	}
+	else if(msgType == MessageType::BadPass){
+		//TODO
+	}
+	else if(msgType == MessageType::AllreadyLoggedIn){
+		//TODO
+	}
+	else if(msgType == MessageType::BadMessageFormat){
+		//TODO
+	}
+	else{
+		qDebug() << "UNKNOWN MESSAGE FORMAT";
+		return;
+	}
+
 }
 
 
