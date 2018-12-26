@@ -41,6 +41,7 @@ private:
 	QHash<QString, QString> m_authData;
 	QHash<QString, QVector<QString>> m_contacts;
 	QHash<QString, QTcpSocket*> m_usernameToSocket;
+	QHash<QString, QVector<QJsonObject>> m_unreadMessages;
 
 	bool m_isInitialized;
 	std::string m_errorMessage;
@@ -56,11 +57,13 @@ private:
 	void addNewContact(const QString& tmpFrom, const QString& tmpTo);
 	void createUser(const QString& pass, const QString& username);
 	void notifyContacts(const QString& username, const MessageType& m) const;
+	void sendUnreadMessages(const QString& username, QTcpSocket* socket);
 	void sendContactsFor(QString username, QTcpSocket* senderSocket) const;
 	void authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSocket);
 	void checkContactExistence(QString tmpFrom, QString tmpTo);
-	void forwardMessage(const QString& to, const QJsonObject& message) const;
+	void forwardMessage(const QString& to, const QJsonObject& message);
 	bool isOnline(QString username) const;
+	bool hasUnreadMessages(const QString& username) const;
 };
 
 #endif // SERVER_H

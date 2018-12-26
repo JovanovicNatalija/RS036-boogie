@@ -129,10 +129,11 @@ void Server::userDisconnected(){
 
 bool Server::sendMessageTo(QTcpSocket* recepient, const QJsonObject& message) const
 {
-	//TODO write this to some log file i guess
 	QString tmp = packMessage(message);
-	if(recepient->write(tmp.toLocal8Bit().data()) != -1)
+	if(recepient->write(tmp.toLocal8Bit().data()) != -1){
+		recepient->flush();
 		return true;
+	}
 
 	else return false;
 }
@@ -145,7 +146,11 @@ bool Server::sendServerMessageTo(QTcpSocket* receipient, const MessageType& msgT
 	if(username != ""){
 		response.insert("to", username);
 	}
-	return -1 != receipient->write(packMessage(response).toLocal8Bit().data());
+	bool ret =  -1 != receipient->write(packMessage(response).toLocal8Bit().data());
+	if(ret){
+		receipient->flush();
+	}
+	return ret;
 
 }
 
@@ -222,6 +227,22 @@ void Server::sendContactsFor(QString username, QTcpSocket* senderSocket) const
 	sendMessageTo(senderSocket, contactsDataJson);
 }
 
+void Server::sendUnreadMessages(const QString& username, QTcpSocket* socket)
+{
+	qDebug() << "Sending unread messages for " << username;
+	for(auto message : m_unreadMessages[username]){
+		qDebug() << QJsonDocument(message).toJson(QJsonDocument::Compact);
+		sendMessageTo(socket, message);
+	}
+	m_unreadMessages.remove(username);
+
+}
+
+bool Server::hasUnreadMessages(const QString& username) const
+{
+	return m_unreadMessages.contains(username);
+}
+
 void Server::authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSocket)
 {
 	if(m_usernameToSocket.contains(jsonResponseObject["username"].toString())){
@@ -242,6 +263,9 @@ void Server::authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSo
 
 		sendContactsFor(tmpUsername, senderSocket);
 		notifyContacts(tmpUsername, MessageType::ContactLogin);
+		if(hasUnreadMessages(tmpUsername)){
+			sendUnreadMessages(tmpUsername, senderSocket);
+		}
 		m_usernameToSocket[tmpUsername] = senderSocket;
 	}
 }
@@ -256,12 +280,14 @@ void Server::checkContactExistence(QString tmpFrom, QString tmpTo)
 	}
 }
 
-void Server::forwardMessage(const QString& to, const QJsonObject& message)const
+void Server::forwardMessage(const QString& to, const QJsonObject& message)
 {
 	bool ret = sendMessageTo(	m_usernameToSocket[to],
 								message);
 	if(!ret){
 		qDebug() << "WEIRD! User " << to << "is not online, afterall";
+		//adding message to buffer for next time user logs in
+		m_unreadMessages[to].append(message);
 	}
 }
 
@@ -301,8 +327,8 @@ void Server::readMessage(){
 	if(jsonResponseObject["type"] == MessageType::Authentication){
 		authentication(jsonResponseObject, senderSocket);
 	}
+
 	//if sent data is text message, forward it only to the intended recepient
-	//TODO this works only when recepient is online
 	else if(jsonResponseObject["type"] == MessageType::Text){
 		QString tmpTo = jsonResponseObject["to"].toString();
 		QString tmpFrom = jsonResponseObject["from"].toString();
@@ -314,7 +340,8 @@ void Server::readMessage(){
 			forwardMessage(tmpTo, jsonResponseObject);
 		}
 		else{
-			//TODO
+			//adding message to buffer for next time user logs in
+			m_unreadMessages[tmpTo].append(jsonResponseObject);
 		}
 	}
 }
