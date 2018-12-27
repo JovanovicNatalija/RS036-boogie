@@ -114,16 +114,15 @@ void Server::userDisconnected(){
 
 	QTcpSocket *disconnectedClient = qobject_cast<QTcpSocket *>(QObject::sender());
 	QString username = m_usernameToSocket.key(disconnectedClient);//linear time but its called rarely so its ok
-	if(username == ""){
-		qDebug() << "WHOOPS! Disconected signal came from socket that was not connected.CHECK!";
-		return;
+	if(username != ""){
+		m_usernameToSocket.remove(username);
+
+		//notify all contacts that user is offline
+		notifyContacts(username, MessageType::ContactLogout);
+
+		qDebug() << "User " << username << " OUT";
 	}
-	m_usernameToSocket.remove(username);
 
-	//notify all contacts that user is offline
-	notifyContacts(username, MessageType::ContactLogout);
-
-	qDebug() << "User " << username << " OUT";
 	disconnectedClient->deleteLater();
 }
 
