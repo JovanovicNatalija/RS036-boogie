@@ -22,6 +22,8 @@ public:
     Q_INVOKABLE void readFromXml();
     Q_INVOKABLE void displayOnConvPage(QString inConversationWith);
     Q_INVOKABLE QString getUsername();
+    Q_INVOKABLE QString fixMsg(QString message);
+    Q_INVOKABLE void addNewContact(QString name);
     void createXml();
     void disconnectFromServer();
 
@@ -29,6 +31,8 @@ public:
 signals:
     void showMsg(QString msgFrom, QString msg);
     void showContacts(QString contact, bool online);
+    void clearContacts();
+    void badPass();
     Q_INVOKABLE void pushConvPage(QString);
     //void aboutToClose();
 
@@ -42,6 +46,7 @@ public:
     // drugi je sama poruka a treci vreme slanja poruke
     std::map<QString, std::vector<std::tuple<QString, QString, QString>>> msgDataBuffer;
     std::map<QString, unsigned long> msgInfos;
+    std::map<QString, bool> contactInfos;
     unsigned long counter = 0;
 
 private:

@@ -12,6 +12,7 @@
 #include <ctime>
 #include <tuple>
 #include "../util/util.h"
+#include <map>
 
 Client::Client(QObject* parrent)
     :QTcpSocket(parrent)
@@ -38,39 +39,77 @@ void Client::disconnectFromServer() {
     std::cout << "Disconected from host" << std::endl;
 }
 
+QString Client::fixMsg(QString message) {
+    int helper = 0;
+    for(int i = 0; i < message.length(); i++){
+        if(i - helper ==  50) {
+            message.insert(i, "\n");
+            helper = i;
+        }
+    }
+    return message;
+}
+
+void Client::addNewContact(QString name) {
+    if(contactInfos[name] != true)
+        contactInfos[name] = false;
+    emit clearContacts();
+    for(auto &pair: contactInfos){
+        emit showContacts(pair.first, pair.second);
+    }
+}
+
 void Client::readMsg(){
     QByteArray messageLength = read(4);
     QJsonDocument jsonMsg = QJsonDocument::fromJson(read(messageLength.toInt()));
     QJsonObject jsonMsgObj = jsonMsg.object();
 	auto msgType = jsonMsgObj["type"];
 
-	if(jsonMsgObj["to"].toString() != username) {
+    if(jsonMsgObj.contains("to") && jsonMsgObj["to"].toString() != username) {
 		qDebug() << "Received msg is not for " << username;
 		return;
 	}
 	if(msgType == MessageType::Text){
+        QString message = jsonMsgObj["msg"].toString();
+        message = fixMsg(message);
 		addMsgToBuffer(jsonMsgObj["from"].toString(),
 						jsonMsgObj["from"].toString(),
-						jsonMsgObj["msg"].toString());
+                        message);
 
 		emit showMsg(jsonMsgObj["from"].toString(),
-					jsonMsgObj["msg"].toString());
+                    message);
+
 	}
 	else if(msgType == MessageType::Contacts){
 		QJsonArray contactsJsonArray = jsonMsgObj["contacts"].toArray();
 		for(auto con : contactsJsonArray){
 			QJsonObject jsonObj = con.toObject();
-			emit showContacts(jsonObj["contact"].toString(), jsonObj["online"].toBool());
+            contactInfos[jsonObj["contact"].toString()] = jsonObj["online"].toBool();
+            //emit showContacts(jsonObj["contact"].toString(), jsonObj["online"].toBool());
 		}
+
+        for(auto &pair: contactInfos){
+            emit showContacts(pair.first, pair.second);
+        }
 	}
 	else if(msgType == MessageType::ContactLogin){
-		//TODO
+        contactInfos[jsonMsgObj["contact"].toString()] = true;
+        emit clearContacts();
+        for(auto &pair: contactInfos){
+            emit showContacts(pair.first, pair.second);
+        }
+
 	}
 	else if(msgType == MessageType::ContactLogout){
-		//TODO
+        contactInfos[jsonMsgObj["contact"].toString()] = false;
+        emit clearContacts();
+        for(auto &pair: contactInfos){
+            emit showContacts(pair.first, pair.second);
+        }
 	}
 	else if(msgType == MessageType::BadPass){
-		//TODO
+        qDebug() << "losa lozinka";
+        emit badPass();
 	}
 	else if(msgType == MessageType::AllreadyLoggedIn){
 		//TODO
@@ -79,7 +118,7 @@ void Client::readMsg(){
 		//TODO
 	}
 	else{
-		qDebug() << "UNKNOWN MESSAGE FORMAT";
+        qDebug() << "UNKNOWN MESSAGE TYPE";
 		return;
 	}
 

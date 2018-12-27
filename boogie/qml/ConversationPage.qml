@@ -1,6 +1,12 @@
 import QtQuick 2.6
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
+import QtQuick 2.6
+import QtQuick.Layouts 1.3
+import QtQuick.Controls.Material 2.1
+import QtQuick.Controls 2.4
+import QtQuick.Window 2.2
+import QtQuick 2.11
 
 Page {
     id: root
@@ -103,8 +109,8 @@ Page {
                     Keys.onPressed: {
                         if(event.key === Qt.Key_Return ){
                             Client.sendMsgData(inConversationWith, messageField.text)
-                            Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text)
-                            messageModel.append({message: messageField.text, index : 1});
+                            Client.addMsgToBuffer(Client.getUsername(), inConversationWith, Client.fixMsg(messageField.text))
+                            messageModel.append({message: Client.fixMsg(messageField.text), index : 1});
                             messageField.clear()
                         }
                     }
@@ -117,8 +123,8 @@ Page {
                     enabled: messageField.length > 0
                     onClicked: {
                         Client.sendMsgData(inConversationWith, messageField.text)
-                        Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text)
-                        messageModel.append({message: messageField.text, index : 1});
+                        Client.addMsgToBuffer(Client.getUsername(), inConversationWith, Client.fixMsg(messageField.text))
+                        messageModel.append({message: Client.fixMsg(messageField.text), index : 1});
                         messageField.clear()
                     }
                 }
