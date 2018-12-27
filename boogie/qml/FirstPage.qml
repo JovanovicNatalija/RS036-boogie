@@ -5,6 +5,9 @@ import QtQuick.Controls.Material 2.1
 import QtQuick.Controls 2.4
 import QtQuick.Window 2.2
 import QtQuick 2.11
+import QtQuick 2.6
+import QtQuick.Layouts 1.3
+import QtQuick.Controls 2.1
 Page {
     id: root
 
@@ -17,7 +20,6 @@ Page {
             anchors.centerIn: parent
         }
     }
-
 	ColumnLayout {
 		anchors.centerIn: parent
 
@@ -92,7 +94,9 @@ Page {
                         Client.connectToServer(usernameField.text, ipField.text)
                         Client.sendAuthData(passwordField.text)
                         Client.readFromXml()
+
                     }
+
                 }
 
             }

@@ -251,7 +251,7 @@ void Server::authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSo
 	else if(checkPassword(jsonResponseObject) == false){
 		qDebug() << "BAD PASS";
 		sendServerMessageTo(senderSocket,MessageType::BadPass);
-		senderSocket->disconnectFromHost();
+        senderSocket->disconnectFromHost();
 	}
 	else{
 		//helper var, just for nicer code;
