@@ -332,12 +332,26 @@ void Server::readMessage(){
 
 	QJsonObject jsonResponseObject = jsonResponse.object();
 
+	auto msgType = jsonResponseObject["type"];
 	//if sent json object is auth object
-	if(jsonResponseObject["type"] == MessageType::Authentication){
+	if(msgType == MessageType::Authentication){
 		authentication(jsonResponseObject, senderSocket);
 	}
+	else if(msgType == MessageType::AddNewContact){
+		QString newContact = jsonResponseObject["username"].toString();
+		QString user =  jsonResponseObject["from"].toString();
+		if(!m_authData.contains(newContact)){
+			jsonResponseObject["exists"] = false;
+		}
+		else{
+			jsonResponseObject["exists"] = true;
+			jsonResponseObject["online"] = isOnline(newContact);
+			checkContactExistence(user, newContact);
+		}
+		forwardMessage(user, jsonResponseObject);
+	}
 	//if sent data is text message, forward it only to the intended recepient
-	else if(jsonResponseObject["type"] == MessageType::Text){
+	else if(msgType == MessageType::Text){
 
 		QString tmpTo = jsonResponseObject["to"].toString();
 		QString tmpFrom = jsonResponseObject["from"].toString();
@@ -347,7 +361,7 @@ void Server::readMessage(){
 			return;
 		}
 
-		checkContactExistence(tmpFrom, tmpTo);
+		//checkContactExistence(tmpFrom, tmpTo);
 		//qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
 		if(isOnline(tmpTo)){
 			forwardMessage(tmpTo, jsonResponseObject);

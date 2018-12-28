@@ -9,7 +9,7 @@ QString packMessage(const QJsonObject& dataToSend);
 
 enum class MessageType : int {Authentication = 1, Text, Contacts, ContactLogout,
 							  ContactLogin, BadPass, AllreadyLoggedIn,
-                              BadMessageFormat, UnknownUser, addNewContact};
+							  BadMessageFormat, UnknownUser, AddNewContact};
 
 bool operator==(const QJsonValue &v, const MessageType& type);
 

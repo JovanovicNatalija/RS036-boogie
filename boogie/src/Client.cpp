@@ -109,7 +109,7 @@ void Client::readMsg(){
             emit showContacts(pair.first, pair.second);
         }
 	}
-    else if(msgType == MessageType::addNewContact) {
+	else if(msgType == MessageType::AddNewContact) {
         if(jsonMsgObj["exists"].toBool() == true)
             addNewContact(jsonMsgObj["username"].toString(), jsonMsgObj["online"].toBool());
     }
@@ -259,8 +259,9 @@ void Client::readFromXml() {
 //saljemo serveru username novog kontakta, da bi proverili da li taj kontakt postoji
 void Client::checkNewContact(QString name){
     QJsonObject jsonObject;
-    jsonObject.insert("type", setMessageType(MessageType::addNewContact));
+	jsonObject.insert("type", setMessageType(MessageType::AddNewContact));
     jsonObject.insert("username", name);
+	jsonObject.insert("from", this->username);
     if(!jsonObject.empty()) {
         QString fullMsgString = packMessage(jsonObject);
         sendMsg(fullMsgString);
