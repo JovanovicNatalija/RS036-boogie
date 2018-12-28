@@ -21,7 +21,7 @@ Page {
     Connections {
         target: Client
         onBadPass: {
-            //root.StackView.view.pop();
+			root.StackView.view.pop();
         }
 
         onClearContacts: {

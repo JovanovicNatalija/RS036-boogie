@@ -352,7 +352,6 @@ void Server::readMessage(){
 	}
 	//if sent data is text message, forward it only to the intended recepient
 	else if(msgType == MessageType::Text){
-
 		QString tmpTo = jsonResponseObject["to"].toString();
 		QString tmpFrom = jsonResponseObject["from"].toString();
 		if(!userExists(tmpTo))
@@ -360,9 +359,6 @@ void Server::readMessage(){
 			sendServerMessageTo(senderSocket,MessageType::UnknownUser,tmpFrom);
 			return;
 		}
-
-		//checkContactExistence(tmpFrom, tmpTo);
-		//qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
 		if(isOnline(tmpTo)){
 			forwardMessage(tmpTo, jsonResponseObject);
 		}
@@ -370,6 +366,10 @@ void Server::readMessage(){
 			//adding message to buffer for next time user logs in
 			m_unreadMessages[tmpTo].append(jsonResponseObject);
 		}
+	}
+	else
+	{
+		qDebug() << "UNKNOWN MESSAGE TYPE";
 	}
 }
 

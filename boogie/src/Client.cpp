@@ -28,7 +28,7 @@ QString Client::getUsername() {
 void Client::connectToServer(QString username, QString ip, quint16 port) {
     connectToHost(ip, port);
 
-    connect(this, SIGNAL(readyRead()), this, SLOT(readMsg()));
+	connect(this, SIGNAL(readyRead()), this, SLOT(readMsg()));
 
     this->username = username;
 
@@ -128,7 +128,14 @@ void Client::readMsg(){
 	}
 	else{
         qDebug() << "UNKNOWN MESSAGE TYPE";
-		return;
+	}
+
+	//GOTTA CATCH 'EM ALL
+	//when multiple messages arive at small time frame,
+	//either signal is not emited or slot is not called(not sure)
+	//so this is necessary for reading them all
+	if(this->bytesAvailable() != 0){
+		emit readyRead();
 	}
 
 }
