@@ -13,6 +13,7 @@
 #include <tuple>
 #include "../util/util.h"
 #include <map>
+#include <QCryptographicHash>
 
 Client::Client(QObject* parrent)
     :QTcpSocket(parrent)
@@ -268,7 +269,10 @@ void Client::sendAuthData(QString password){
     QJsonObject jsonAuthObject;
     //pravimo json objekat u koji smestamo podatke
 	jsonAuthObject.insert("type", setMessageType(MessageType::Authentication));
-	jsonAuthObject.insert("password", password);
+	QString hashedPassword =
+			QString(QCryptographicHash::hash((password.toLocal8Bit().data()),
+											 QCryptographicHash::Md5).toHex());
+	jsonAuthObject.insert("password", hashedPassword);
 	jsonAuthObject.insert("username", username);
 	if(!jsonAuthObject.empty()) {
 		QString fullAuthString = packMessage(jsonAuthObject);
