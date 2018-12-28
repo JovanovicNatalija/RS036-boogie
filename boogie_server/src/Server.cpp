@@ -145,7 +145,7 @@ bool Server::sendServerMessageTo(QTcpSocket* receipient, const MessageType& msgT
 	if(username != ""){
 		response.insert("to", username);
 	}
-	bool ret =  -1 != receipient->write(packMessage(response).toLocal8Bit().data());
+	bool ret = -1 != receipient->write(packMessage(response).toLocal8Bit().data());
 	if(ret){
 		receipient->flush();
 	}
@@ -189,16 +189,21 @@ void Server::addNewContact(const QString& user, const QString& contact)
 	m_contacts[user].append(contact);
 
 	//first user in xml
-	auto userDomElement = m_users.at(0);
-	int i = 1;
+
+	QDomNode userDomElement;
+	int i = 0;
+
 	//find dom element for given user
-	while(userDomElement.attributes().namedItem("username").nodeValue()
-			!= user){
-		userDomElement = m_users.at(i++);
+	for(i = 0;i < m_users.count();++i){
+		userDomElement = m_users.at(i);
+		if(userDomElement.attributes().namedItem("username").nodeValue() == user)
+		{
+			QDomElement newContact = createNewXmlElement("contact", contact);
+			userDomElement.firstChildElement("contacts").appendChild(newContact);
+			saveXMLFile();
+			break;
+		}
 	}
-	QDomElement newContact = createNewXmlElement("contact", contact);
-	userDomElement.firstChildElement("contacts").appendChild(newContact);
-	saveXMLFile();
 }
 
 bool isNumeric(QByteArray arr){
@@ -268,7 +273,7 @@ void Server::authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSo
 	}
 }
 
-void Server::checkContactExistence(QString tmpFrom, QString tmpTo)
+void Server::checkContactExistence(const QString& tmpFrom, const QString& tmpTo)
 {
 	if(!m_contacts[tmpFrom].contains(tmpTo)){
 		addNewContact(tmpFrom, tmpTo);
@@ -289,9 +294,15 @@ void Server::forwardMessage(const QString& to, const QJsonObject& message)
 	}
 }
 
-bool Server::isOnline(QString username) const
+bool Server::isOnline(const QString& username) const
 {
 	return m_usernameToSocket.contains(username);
+}
+
+//user exists if it exists in m_authData
+bool Server::userExists(const QString& username) const
+{
+	return m_authData.contains(username);
 }
 
 void Server::readMessage(){
@@ -325,14 +336,18 @@ void Server::readMessage(){
 	if(jsonResponseObject["type"] == MessageType::Authentication){
 		authentication(jsonResponseObject, senderSocket);
 	}
-
 	//if sent data is text message, forward it only to the intended recepient
 	else if(jsonResponseObject["type"] == MessageType::Text){
+
 		QString tmpTo = jsonResponseObject["to"].toString();
 		QString tmpFrom = jsonResponseObject["from"].toString();
+		if(!userExists(tmpTo))
+		{
+			sendServerMessageTo(senderSocket,MessageType::UnknownUser,tmpFrom);
+			return;
+		}
 
 		checkContactExistence(tmpFrom, tmpTo);
-
 		//qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
 		if(isOnline(tmpTo)){
 			forwardMessage(tmpTo, jsonResponseObject);

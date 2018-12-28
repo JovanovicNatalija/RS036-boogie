@@ -117,6 +117,9 @@ void Client::readMsg(){
 	else if(msgType == MessageType::BadMessageFormat){
 		//TODO
 	}
+	else if(msgType == MessageType::UnknownUser){
+		//TODO
+	}
 	else{
         qDebug() << "UNKNOWN MESSAGE TYPE";
 		return;
