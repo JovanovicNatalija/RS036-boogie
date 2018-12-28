@@ -7,6 +7,8 @@ import QtQuick.Controls.Material 2.1
 import QtQuick.Controls 2.4
 import QtQuick.Window 2.2
 import QtQuick 2.11
+import QtQuick 2.2
+import QtQuick.Dialogs 1.3
 
 Page {
     id: root
@@ -40,6 +42,16 @@ Page {
             text: inConversationWith
             font.pixelSize: 20
             anchors.centerIn: parent
+        }
+    }
+
+    FileDialog {
+        id: fileDialog
+        visible: false
+        title: "Izaberi sliku"
+        folder: shortcuts.home
+        onAccepted: {
+            Client.sendPicture(fileDialog.fileUrls)
         }
     }
 
@@ -128,6 +140,13 @@ Page {
                         messageField.clear()
                     }
                 }
+               Button {
+                   id: picButton
+                   text: qsTr("Picture")
+                   onClicked: {
+                       fileDialog.open()
+                   }
+               }
             }
         }
     }

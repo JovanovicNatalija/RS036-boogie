@@ -267,6 +267,10 @@ void Client::checkNewContact(QString name){
     }
 }
 
+void Client::sendPicture(QString filePath) {
+    qDebug() << filePath;
+}
+
 //saljemo poruku i podatke o njoj na server
 void Client::sendMsgData(QString to, QString msg) {
 	QJsonObject jsonMessageObject;
