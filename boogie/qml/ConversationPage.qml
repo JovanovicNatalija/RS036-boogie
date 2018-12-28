@@ -109,8 +109,8 @@ Page {
                     Keys.onPressed: {
                         if(event.key === Qt.Key_Return ){
                             Client.sendMsgData(inConversationWith, messageField.text)
-                            Client.addMsgToBuffer(Client.getUsername(), inConversationWith, Client.fixMsg(messageField.text))
-                            messageModel.append({message: Client.fixMsg(messageField.text), index : 1});
+                            Client.addMsgToBuffer(Client.getUsername(), inConversationWith, Client.splitMessage(messageField.text))
+                            messageModel.append({message: Client.splitMessage(messageField.text), index : 1});
                             messageField.clear()
                         }
                     }
@@ -123,8 +123,8 @@ Page {
                     enabled: messageField.length > 0
                     onClicked: {
                         Client.sendMsgData(inConversationWith, messageField.text)
-                        Client.addMsgToBuffer(Client.getUsername(), inConversationWith, Client.fixMsg(messageField.text))
-                        messageModel.append({message: Client.fixMsg(messageField.text), index : 1});
+                        Client.addMsgToBuffer(Client.getUsername(), inConversationWith, Client.splitMessage(messageField.text))
+                        messageModel.append({message: Client.splitMessage(messageField.text), index : 1});
                         messageField.clear()
                     }
                 }

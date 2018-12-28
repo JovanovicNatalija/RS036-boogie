@@ -40,7 +40,7 @@ void Client::disconnectFromServer() {
     std::cout << "Disconected from host" << std::endl;
 }
 
-QString Client::fixMsg(QString message) {
+QString Client::splitMessage(QString message) {
     int helper = 0;
     for(int i = 0; i < message.length(); i++){
         if(i - helper ==  50) {
@@ -51,9 +51,10 @@ QString Client::fixMsg(QString message) {
     return message;
 }
 
-void Client::addNewContact(QString name) {
+void Client::addNewContact(QString name, bool online) {
+
     if(contactInfos[name] != true)
-        contactInfos[name] = false;
+        contactInfos[name] = online;
     emit clearContacts();
     for(auto &pair: contactInfos){
         emit showContacts(pair.first, pair.second);
@@ -72,7 +73,7 @@ void Client::readMsg(){
 	}
 	if(msgType == MessageType::Text){
         QString message = jsonMsgObj["msg"].toString();
-        message = fixMsg(message);
+        message = splitMessage(message);
 		addMsgToBuffer(jsonMsgObj["from"].toString(),
 						jsonMsgObj["from"].toString(),
                         message);
@@ -108,6 +109,10 @@ void Client::readMsg(){
             emit showContacts(pair.first, pair.second);
         }
 	}
+    else if(msgType == MessageType::addNewContact) {
+        if(jsonMsgObj["exists"].toBool() == true)
+            addNewContact(jsonMsgObj["username"].toString(), jsonMsgObj["online"].toBool());
+    }
 	else if(msgType == MessageType::BadPass){
         qDebug() << "losa lozinka";
         emit badPass();
@@ -140,7 +145,7 @@ void Client::addMsgToBuffer(QString sender, QString inConversationWith, QString 
     std::time_t end_time = std::chrono::system_clock::to_time_t(start);
     std::tm * ptm = std::localtime(&end_time);
     char time[32];
-    std::strftime(time, 32, "%a, %d.%m.%Y %H:%M:%S", ptm);
+    std::strftime(time, 32, "%d.%m.%Y %H:%M:%S", ptm);
     if(msgDataBuffer.find(inConversationWith) == msgDataBuffer.end()) {
         msgInfos[inConversationWith] = 0;
     }
@@ -249,6 +254,17 @@ void Client::readFromXml() {
     }
 
     data.close();
+}
+
+//saljemo serveru username novog kontakta, da bi proverili da li taj kontakt postoji
+void Client::checkNewContact(QString name){
+    QJsonObject jsonObject;
+    jsonObject.insert("type", setMessageType(MessageType::addNewContact));
+    jsonObject.insert("username", name);
+    if(!jsonObject.empty()) {
+        QString fullMsgString = packMessage(jsonObject);
+        sendMsg(fullMsgString);
+    }
 }
 
 //saljemo poruku i podatke o njoj na server

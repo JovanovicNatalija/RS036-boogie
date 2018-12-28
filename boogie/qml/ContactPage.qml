@@ -21,7 +21,7 @@ Page {
     Connections {
         target: Client
         onBadPass: {
-            root.StackView.view.pop();
+            //root.StackView.view.pop();
         }
 
         onClearContacts: {
@@ -65,7 +65,7 @@ Page {
                     text: qsTr("Dodaj")
                     enabled: newContactField.length > 0
                     onClicked: {
-                        Client.addNewContact(newContactField.text)
+                        Client.checkNewContact(newContactField.text)
                         newContactField.clear()
                     }
                 }
