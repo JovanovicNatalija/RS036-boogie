@@ -12,6 +12,9 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
 
+    QCoreApplication::setOrganizationName("Boogie");
+    QCoreApplication::setOrganizationDomain("Boogie.com");
+
     Client c;
 
     engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));

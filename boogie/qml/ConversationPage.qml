@@ -50,8 +50,9 @@ Page {
         visible: false
         title: "Izaberi sliku"
         folder: shortcuts.home
+        nameFilters: ["Images files (*.jpg, *png)"]
         onAccepted: {
-            Client.sendPicture(fileDialog.fileUrls)
+            Client.sendPicture(fileDialog.fileUrl, inConversationWith)
         }
     }
 

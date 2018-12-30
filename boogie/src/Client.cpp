@@ -14,11 +14,17 @@
 #include "../util/util.h"
 #include <map>
 #include <QCryptographicHash>
+#include <QImageReader>
+#include <QPixmap>
+#include <QBuffer>
+#include <QUrl>
+#include <iostream>
+#include <QImageWriter>
 
 Client::Client(QObject* parrent)
     :QTcpSocket(parrent)
 {
-	std::cout << "Client created" << std::endl;
+    std::cout << "Client created" << std::endl;
 }
 
 QString Client::getUsername() {
@@ -28,7 +34,7 @@ QString Client::getUsername() {
 void Client::connectToServer(QString username, QString ip, quint16 port) {
     connectToHost(ip, port);
 
-	connect(this, SIGNAL(readyRead()), this, SLOT(readMsg()));
+    connect(this, SIGNAL(readyRead()), this, SLOT(readMsg()));
 
     this->username = username;
 
@@ -65,79 +71,91 @@ void Client::readMsg(){
     QByteArray messageLength = read(4);
     QJsonDocument jsonMsg = QJsonDocument::fromJson(read(messageLength.toInt()));
     QJsonObject jsonMsgObj = jsonMsg.object();
-	auto msgType = jsonMsgObj["type"];
+    auto msgType = jsonMsgObj["type"];
 
     if(jsonMsgObj.contains("to") && jsonMsgObj["to"].toString() != username) {
-		qDebug() << "Received msg is not for " << username;
-		return;
-	}
-	if(msgType == MessageType::Text){
+        qDebug() << "Received msg is not for " << username;
+        return;
+    }
+    if(msgType == MessageType::Text){
         QString message = jsonMsgObj["msg"].toString();
         message = splitMessage(message);
-		addMsgToBuffer(jsonMsgObj["from"].toString(),
-						jsonMsgObj["from"].toString(),
+        addMsgToBuffer(jsonMsgObj["from"].toString(),
+                        jsonMsgObj["from"].toString(),
                         message);
 
-		emit showMsg(jsonMsgObj["from"].toString(),
+        emit showMsg(jsonMsgObj["from"].toString(),
                     message);
 
-	}
-	else if(msgType == MessageType::Contacts){
-		QJsonArray contactsJsonArray = jsonMsgObj["contacts"].toArray();
-		for(auto con : contactsJsonArray){
-			QJsonObject jsonObj = con.toObject();
+    }
+    else if(msgType == MessageType::Contacts){
+        QJsonArray contactsJsonArray = jsonMsgObj["contacts"].toArray();
+        for(auto con : contactsJsonArray){
+            QJsonObject jsonObj = con.toObject();
             contactInfos[jsonObj["contact"].toString()] = jsonObj["online"].toBool();
             //emit showContacts(jsonObj["contact"].toString(), jsonObj["online"].toBool());
-		}
+        }
 
         for(auto &pair: contactInfos){
             emit showContacts(pair.first, pair.second);
         }
-	}
-	else if(msgType == MessageType::ContactLogin){
+    }
+    else if(msgType == MessageType::ContactLogin){
         contactInfos[jsonMsgObj["contact"].toString()] = true;
         emit clearContacts();
         for(auto &pair: contactInfos){
             emit showContacts(pair.first, pair.second);
         }
 
-	}
-	else if(msgType == MessageType::ContactLogout){
+    }
+    else if(msgType == MessageType::ContactLogout){
         contactInfos[jsonMsgObj["contact"].toString()] = false;
         emit clearContacts();
         for(auto &pair: contactInfos){
             emit showContacts(pair.first, pair.second);
         }
-	}
-	else if(msgType == MessageType::AddNewContact) {
+    }
+    else if(msgType == MessageType::AddNewContact) {
         if(jsonMsgObj["exists"].toBool() == true)
             addNewContact(jsonMsgObj["username"].toString(), jsonMsgObj["online"].toBool());
     }
-	else if(msgType == MessageType::BadPass){
+    else if(msgType == MessageType::BadPass){
         qDebug() << "losa lozinka";
         emit badPass();
-	}
-	else if(msgType == MessageType::AllreadyLoggedIn){
-		//TODO
-	}
-	else if(msgType == MessageType::BadMessageFormat){
-		//TODO
-	}
-	else if(msgType == MessageType::UnknownUser){
-		//TODO
-	}
-	else{
+    }
+    else if(msgType == MessageType::AllreadyLoggedIn){
+        //TODO
+    }
+    else if(msgType == MessageType::BadMessageFormat){
+        //TODO
+    }
+    else if(msgType == MessageType::UnknownUser){
+        //TODO
+    }
+    else if (msgType == MessageType::Image){
+        // ovako je samo dok ne proradi
+        // TODO: popravi kada proradi
+        qDebug() << "stiglo je" << jsonMsgObj["counter"].toString();
+        mapOfImages[jsonMsgObj["id"].toString()].append(jsonMsgObj["msg"].toString().toLatin1());
+        if(jsonMsgObj["counter"].toString() == "end") {
+            QPixmap p;
+            p.loadFromData(QByteArray::fromBase64(mapOfImages[jsonMsgObj["id"].toString()]));
+            QImage image = p.toImage();
+            QImageWriter writer(jsonMsgObj["id"].toString() + ".png", "png");
+            writer.write(image);
+        }
+    }
+    else {
         qDebug() << "UNKNOWN MESSAGE TYPE";
-	}
+    }
 
-	//GOTTA CATCH 'EM ALL
-	//when multiple messages arive at small time frame,
-	//either signal is not emited or slot is not called(not sure)
-	//so this is necessary for reading them all
-	if(this->bytesAvailable() != 0){
-		emit readyRead();
-	}
-
+    //GOTTA CATCH 'EM ALL
+    //when multiple messages arive at small time frame,
+    //either signal is not emited or slot is not called(not sure)
+    //so this is necessary for reading them all
+    if(this->bytesAvailable() != 0){
+        emit readyRead();
+    }
 }
 
 
@@ -266,28 +284,58 @@ void Client::readFromXml() {
 //saljemo serveru username novog kontakta, da bi proverili da li taj kontakt postoji
 void Client::checkNewContact(QString name){
     QJsonObject jsonObject;
-	jsonObject.insert("type", setMessageType(MessageType::AddNewContact));
+    jsonObject.insert("type", setMessageType(MessageType::AddNewContact));
     jsonObject.insert("username", name);
-	jsonObject.insert("from", this->username);
+    jsonObject.insert("from", this->username);
     if(!jsonObject.empty()) {
         QString fullMsgString = packMessage(jsonObject);
         sendMsg(fullMsgString);
     }
 }
 
-void Client::sendPicture(QString filePath) {
-    qDebug() << filePath;
+void Client::sendPicture(QString filePath, QString to) {
+    QImageReader reader(QUrl(filePath).toLocalFile());
+    QImage img = reader.read();
+    auto pix = QPixmap::fromImage(img);
+    QBuffer buffer;
+    buffer.open(QIODevice::WriteOnly);
+    // TODO sta ako nije png
+    pix.save(&buffer, "png");
+    auto const data = buffer.data().toBase64();
+    for(int i = 0; (i*9800) < data.size(); i++) {
+        qDebug() << i*9800 << "-" << data.size();
+        QJsonObject jsonMessageObject;
+        jsonMessageObject.insert("type", setMessageType(MessageType::Image));
+        jsonMessageObject.insert("from", username);
+        jsonMessageObject.insert("to", to);
+        if((i+1)*9800 < data.size()) {
+            //qDebug() << data.toString().mid(i*9800, 9800);
+            jsonMessageObject.insert("msg", QLatin1String(data.mid(i*9800, 9800)));
+            jsonMessageObject.insert("id", QString("img") + QString::number(imageNum));
+            jsonMessageObject.insert("counter", QString::number(i));
+        } else {
+            //qDebug() << data.toString().mid(i*9800);
+            jsonMessageObject.insert("msg", QLatin1String(data.mid(i*9800)));
+            jsonMessageObject.insert("id", QString("img") + QString::number(imageNum));
+            jsonMessageObject.insert("counter", "end");
+        }
+        if(!jsonMessageObject.empty()) {
+            QString fullMsgString = packMessage(jsonMessageObject);
+            sendMsg(fullMsgString);
+        }
+    }
+    imageNum++;
 }
 
 //saljemo poruku i podatke o njoj na server
 void Client::sendMsgData(QString to, QString msg) {
-	QJsonObject jsonMessageObject;
-	jsonMessageObject.insert("type", setMessageType(MessageType::Text));
+    QJsonObject jsonMessageObject;
+    jsonMessageObject.insert("type", setMessageType(MessageType::Text));
     jsonMessageObject.insert("from", username);
-	jsonMessageObject.insert("to", to);
-	jsonMessageObject.insert("msg", msg);
-	if(!jsonMessageObject.empty()) {
-		QString fullMsgString = packMessage(jsonMessageObject);
+    jsonMessageObject.insert("to", to);
+    jsonMessageObject.insert("msg", msg);
+    if(!jsonMessageObject.empty()) {
+        QString fullMsgString = packMessage(jsonMessageObject);
         sendMsg(fullMsgString);
     }
 }
@@ -296,14 +344,14 @@ void Client::sendMsgData(QString to, QString msg) {
 void Client::sendAuthData(QString password){
     QJsonObject jsonAuthObject;
     //pravimo json objekat u koji smestamo podatke
-	jsonAuthObject.insert("type", setMessageType(MessageType::Authentication));
-	QString hashedPassword =
-			QString(QCryptographicHash::hash((password.toLocal8Bit().data()),
-											 QCryptographicHash::Md5).toHex());
-	jsonAuthObject.insert("password", hashedPassword);
-	jsonAuthObject.insert("username", username);
-	if(!jsonAuthObject.empty()) {
-		QString fullAuthString = packMessage(jsonAuthObject);
+    jsonAuthObject.insert("type", setMessageType(MessageType::Authentication));
+    QString hashedPassword =
+            QString(QCryptographicHash::hash((password.toLocal8Bit().data()),
+                                             QCryptographicHash::Md5).toHex());
+    jsonAuthObject.insert("password", hashedPassword);
+    jsonAuthObject.insert("username", username);
+    if(!jsonAuthObject.empty()) {
+        QString fullAuthString = packMessage(jsonAuthObject);
         sendMsg(fullAuthString);
         //qDebug() << strJson << strJson.length() << fullAuthString;
     }

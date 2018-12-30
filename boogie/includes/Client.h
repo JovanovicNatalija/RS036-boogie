@@ -25,7 +25,7 @@ public:
     Q_INVOKABLE QString splitMessage(QString message);
     Q_INVOKABLE void addNewContact(QString name, bool online);
     Q_INVOKABLE void checkNewContact(QString name);
-    Q_INVOKABLE void sendPicture(QString filePath);
+    Q_INVOKABLE void sendPicture(QString filePath, QString to);
     void createXml();
     void disconnectFromServer();
 
@@ -49,7 +49,9 @@ public:
     std::map<QString, std::vector<std::tuple<QString, QString, QString>>> msgDataBuffer;
     std::map<QString, unsigned long> msgInfos;
     std::map<QString, bool> contactInfos;
+    std::map<QString, QByteArray> mapOfImages;
     unsigned long counter = 0;
+    int imageNum = 0;
 
 private:
     QString username;
