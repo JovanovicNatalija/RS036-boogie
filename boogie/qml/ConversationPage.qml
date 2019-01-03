@@ -1,4 +1,4 @@
-﻿import QtQuick 2.12
+﻿import QtQuick 2.10
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Layouts 1.3
@@ -86,7 +86,7 @@ Page {
             model: messageModel
 
             delegate: Rectangle {
-                width: lblMsg.width + 2*lblMsg.anchors.margins
+				width: lblMsg.width + 2*lblMsg.anchors.margins
                 height: lblMsg.height + 2*lblMsg.anchors.margins
                 radius: 10
                 color: index ? "#4F7942" : "#808080"
@@ -97,7 +97,9 @@ Page {
                 Label {
                     id: lblMsg
                     text: model.message
+					width: 500
                     color: "black"
+					wrapMode: Text.WordWrap
                     anchors.centerIn: parent
                     anchors.margins: 10
                 }
@@ -123,12 +125,12 @@ Page {
                     id: messageField
                     Layout.fillWidth: true
                     placeholderText: qsTr("Poruka")
-                    wrapMode: TextArea.Wrap
+					wrapMode: Text.WordWrap
                     Keys.onPressed: {
                         if(event.key === Qt.Key_Return ){
                             Client.sendMsgData(inConversationWith, messageField.text.trim())
-                            Client.addMsgToBuffer(Client.getUsername(), inConversationWith, Client.splitMessage(messageField.text.trim()))
-                            messageModel.append({message: Client.splitMessage(messageField.text.trim()), index : 1});
+							Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text.trim())
+							messageModel.append({message: messageField.text.trim(), index : 1});
                             messageField.clear()
                         }
                     }
@@ -141,8 +143,8 @@ Page {
                     enabled: messageField.length > 0
                     onClicked: {
                         Client.sendMsgData(inConversationWith, messageField.text)
-                        Client.addMsgToBuffer(Client.getUsername(), inConversationWith, Client.splitMessage(messageField.text))
-                        messageModel.append({message: Client.splitMessage(messageField.text), index : 1});
+						Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text)
+						messageModel.append({message: messageField.text, index : 1});
                         messageField.clear()
                     }
                 }

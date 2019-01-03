@@ -73,7 +73,8 @@ void Client::readMsg(){
 	}
 	if(msgType == MessageType::Text){
         QString message = jsonMsgObj["msg"].toString();
-        message = splitMessage(message);
+		//message = splitMessage(message);
+		qDebug() << message;
 		addMsgToBuffer(jsonMsgObj["from"].toString(),
 						jsonMsgObj["from"].toString(),
                         message);
