@@ -40,16 +40,17 @@ void Client::disconnectFromServer() {
     std::cout << "Disconected from host" << std::endl;
 }
 
-QString Client::splitMessage(QString message) {
-    int helper = 0;
-    for(int i = 0; i < message.length(); i++){
-        if(i - helper ==  50) {
-            message.insert(i, "\n");
-            helper = i;
-        }
-    }
-    return message;
-}
+//Currently unused, uncomment and fix if needed
+//QString Client::splitMessage(QString message) {
+//    int helper = 0;
+//    for(int i = 0; i < message.length(); i++){
+//        if(i - helper ==  50) {
+//            message.insert(i, "\n");
+//            helper = i;
+//        }
+//    }
+//    return message;
+//}
 
 void Client::addNewContact(QString name, bool online) {
 
@@ -74,7 +75,6 @@ void Client::readMsg(){
 	if(msgType == MessageType::Text){
         QString message = jsonMsgObj["msg"].toString();
 		//message = splitMessage(message);
-		qDebug() << message;
 		addMsgToBuffer(jsonMsgObj["from"].toString(),
 						jsonMsgObj["from"].toString(),
                         message);

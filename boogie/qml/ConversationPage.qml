@@ -87,7 +87,7 @@ Page {
 
             delegate: Rectangle {
 				width: lblMsg.width + 2*lblMsg.anchors.margins
-                height: lblMsg.height + 2*lblMsg.anchors.margins
+				height: lblMsg.height + 2*lblMsg.anchors.margins
                 radius: 10
                 color: index ? "#4F7942" : "#808080"
                 anchors.right: {
@@ -97,12 +97,20 @@ Page {
                 Label {
                     id: lblMsg
                     text: model.message
-					width: 500
+					//used to get text width in pixels
+					TextMetrics {
+						id: textMetrics
+						font: lblMsg.font
+						text: lblMsg.text
+					}
+					width: textMetrics.boundingRect.width < 500
+							? textMetrics.boundingRect.width : 500
                     color: "black"
-					wrapMode: Text.WordWrap
+					wrapMode: width == 500 ? Text.WordWrap : Text.NoWrap
                     anchors.centerIn: parent
                     anchors.margins: 10
                 }
+
             }
 
             onCountChanged: {
@@ -132,6 +140,8 @@ Page {
 							Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text.trim())
 							messageModel.append({message: messageField.text.trim(), index : 1});
                             messageField.clear()
+							//so that textArea wouldnt read return key too
+							event.accepted = true
                         }
                     }
                 }
