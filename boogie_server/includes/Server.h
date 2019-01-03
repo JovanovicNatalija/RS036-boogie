@@ -12,6 +12,9 @@
 
 #include <QDomDocument>
 
+#include <QSslKey>
+#include <QSslCertificate>
+
 
 class Server : public QTcpServer
 {
@@ -27,9 +30,14 @@ public:
 public slots:
 	void newConnection();
 	void userDisconnected();
+	void sslErrors(const QList<QSslError> &errors);
 	void readMessage();
 
 private:
+
+	QSslKey key;
+	QSslCertificate cert;
+
 	QDomDocument m_dataDoc;
 	const QString DATA_FILE_PATH = QDir::currentPath() + "/data.xml";
 
@@ -42,7 +50,7 @@ private:
 	bool m_isInitialized;
 	std::string m_errorMessage;
 
-
+	void incomingConnection(qintptr socketDescriptor) override;
 
 	/*XML FUNCTIONS*/
 	void loadData();

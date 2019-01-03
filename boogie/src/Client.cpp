@@ -16,8 +16,25 @@
 #include <QCryptographicHash>
 
 Client::Client(QObject* parrent)
-    :QTcpSocket(parrent)
+	:QSslSocket(parrent)
 {
+
+	QList<QSslCertificate> cert = QSslCertificate::fromPath(QLatin1String("../certs/red_local.pem"));
+	QSslError error(QSslError::SelfSignedCertificate, cert.at(0));
+	QList<QSslError> expectedSslErrors;
+	expectedSslErrors.append(error);
+
+
+	ignoreSslErrors(expectedSslErrors);
+	//socket.connectToHostEncrypted("server.tld", 443);
+
+	//addCaCertificates("../certs/red_ca.pem");
+	setLocalCertificate("../certs/blue_local.pem");
+	setPrivateKey("../certs/blue_local.key");
+	setPeerVerifyMode(QSslSocket::VerifyPeer);
+	connect(this,  SIGNAL(sslErrors(QList<QSslError>)), this,
+			SLOT(sslErrors(QList<QSslError>)));
+
 	std::cout << "Client created" << std::endl;
 }
 
@@ -25,14 +42,29 @@ QString Client::getUsername() {
     return username;
 }
 
-void Client::connectToServer(QString username, QString ip, quint16 port) {
-    connectToHost(ip, port);
+void Client::sslErrors(const QList<QSslError> &errors)
+{
+	std::cerr << "tu sam" << std::endl;
+	foreach (const QSslError &error, errors)
+		std::cerr << error.errorString().toStdString() << std::endl;
+}
 
+
+void Client::connectToServer(QString username, QString ip, quint16 port) {
+	connectToHostEncrypted(ip, port);
+
+	if(waitForEncrypted(3000)){
+		qDebug() << "Encrypted connection established";
+	}
+	else{
+		std::cerr << "Unable to connect to server" << std::endl;
+		return;
+	}
 	connect(this, SIGNAL(readyRead()), this, SLOT(readMsg()));
 
     this->username = username;
 
-    std::cout << "Connected to host" << std::endl;
+	//std::cout << "Connected to host" << std::endl;
 }
 
 void Client::disconnectFromServer() {

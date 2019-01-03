@@ -1,14 +1,14 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include <QTcpSocket>
+#include <QSslSocket>
 #include <map>
 #include <vector>
 #include <iterator>
 #include <tuple>
 #include <ctime>
 #include <chrono>
-class Client : public QTcpSocket
+class Client : public QSslSocket
 {
     Q_OBJECT
 public:
@@ -40,7 +40,7 @@ signals:
 
 public slots:
     void readMsg();
-
+	void sslErrors(const QList<QSslError> &errors);
 
 public:
     //pravimo buffer u vidu mape koja sadrzi podatke: kljuc je username one osobe sa kojom je korisnik

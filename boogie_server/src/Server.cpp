@@ -7,6 +7,8 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 
+#include <QSslSocket>
+
 #include <QDomDocument>
 
 #include <iostream>
@@ -18,6 +20,17 @@ Server::~Server(){}
 
 Server::Server(quint16 port)
 {
+	QFile keyFile("../certs/red_local.key");
+	keyFile.open(QIODevice::ReadOnly);
+	key = QSslKey(keyFile.readAll(), QSsl::Rsa);
+	keyFile.close();
+
+	QFile certFile("../certs/red_local.pem");
+	certFile.open(QIODevice::ReadOnly);
+	cert = QSslCertificate(certFile.readAll());
+	certFile.close();
+
+
 	m_isInitialized = true;
 	if(port <= 1024){//first 1024 ports are not to be touched
 		m_errorMessage = "BAD PORT NUMBER";
@@ -35,6 +48,39 @@ Server::Server(quint16 port)
 
 	connect(this, &QTcpServer::newConnection, this, &Server::newConnection);
 	qDebug("server created");
+}
+
+void Server::incomingConnection(qintptr socketDescriptor)
+{
+	QSslSocket *newConnection = new QSslSocket(this);
+
+	QSslError error(QSslError::SelfSignedCertificate);
+	QList<QSslError> expectedSslErrors;
+	expectedSslErrors.append(error);
+
+	newConnection->ignoreSslErrors(expectedSslErrors);
+
+	connect(newConnection, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(sslErrors(QList<QSslError>)));
+	newConnection->setSocketDescriptor(socketDescriptor);
+	newConnection->setPrivateKey(key);
+	newConnection->setLocalCertificate(cert);
+	newConnection->addCaCertificates("../certs/blue_ca.pem");
+	newConnection->setPeerVerifyMode(QSslSocket::VerifyPeer);
+	newConnection->startServerEncryption();
+
+	addPendingConnection(newConnection);
+}
+
+void Server::sslErrors(const QList<QSslError> &errors)
+{
+	std::cerr << "tu sam" << std::endl;
+	foreach (const QSslError &error, errors){
+		std::cerr << error.errorString().toStdString() << std::endl;
+//		if(error== QSslError::SelfSignedCertificate){
+//			ignoreSslErrors(error);
+//		}
+	}
+
 }
 
 void Server::loadData(){

@@ -96,10 +96,10 @@ Page {
                     if(index) parent.right
                 }
 
-                Label {
+				Label {
                     id: lblMsg
                     text: model.message
-                    anchors.centerIn: parent
+					anchors.centerIn: parent
                 }
             }
 
