@@ -2,7 +2,6 @@ import QtQuick 2.6
 import QtQuick.Controls 2.1
 import QtQuick.Layouts 1.3
 
-
 Page {
     id: root
 
@@ -35,6 +34,7 @@ Page {
     }
 
     ListView{
+        width: parent.width
         id: listView
         anchors.fill: parent
         topMargin: 48
@@ -43,34 +43,31 @@ Page {
         rightMargin: 48
         spacing: 20
         model: contactModel
-        Column {
+        header: RowLayout {
+            id: glMainLayout
             width: parent.width
-            GridLayout{
-                id: glMainLayout
-                columns: 3
+            Label{
+               id: addContact
+               text: qsTr("Novi kontakt:")
+               font.pixelSize: 15
+            }
+            TextField {
+                id: newContactField
+                placeholderText: qsTr("Korisnicko ime")
+                selectByMouse: true
 
-                Label{
-                    id: addContact
-                    text: qsTr("Dodaj novi kontakt:")
-                    font.pixelSize: 12
-
-                }
-                TextField {
-                    id: newContactField
-                    placeholderText: qsTr("Korisnicko ime")
-                    selectByMouse: true
-                }
-                Button {
-                    id: addContactButton
-                    text: qsTr("Dodaj")
-                    enabled: newContactField.length > 0
-                    onClicked: {
-                        Client.checkNewContact(newContactField.text)
-                        newContactField.clear()
-                    }
+            }
+            Button {
+                id: addContactButton
+                text: qsTr("Dodaj novi kontakt")
+                enabled: newContactField.length > 0
+                onClicked: {
+                    Client.checkNewContact(newContactField.text)
+                    newContactField.clear()
                 }
             }
         }
+
         delegate: ItemDelegate {
             Rectangle {
                  width: 10
@@ -79,6 +76,7 @@ Page {
                  border.color: "black"
                  border.width: 1
                  radius: width*0.5
+                 anchors.verticalCenter: parent.verticalCenter
             }
             text: model.con
             width: listView.width - listView.leftMargin - listView.rightMargin
