@@ -22,7 +22,7 @@ public:
     Q_INVOKABLE void readFromXml();
     Q_INVOKABLE void displayOnConvPage(QString inConversationWith);
     Q_INVOKABLE QString getUsername();
-    Q_INVOKABLE QString splitMessage(QString message);
+	//Q_INVOKABLE QString splitMessage(QString message);
     Q_INVOKABLE void addNewContact(QString name, bool online);
     Q_INVOKABLE void checkNewContact(QString name);
     Q_INVOKABLE void sendPicture(QString filePath);

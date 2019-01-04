@@ -86,8 +86,8 @@ Page {
             model: messageModel
 
             delegate: Rectangle {
-                width: lblMsg.width + 2*lblMsg.anchors.margins
-                height: lblMsg.height + 2*lblMsg.anchors.margins
+				width: lblMsg.width + 2*lblMsg.anchors.margins
+				height: lblMsg.height + 2*lblMsg.anchors.margins
                 radius: 10
                 color: index ? "#4F7942" : "#808080"
                 anchors.right: {
@@ -97,10 +97,20 @@ Page {
                 Label {
                     id: lblMsg
                     text: model.message
+					//used to get text width in pixels
+					TextMetrics {
+						id: textMetrics
+						font: lblMsg.font
+						text: lblMsg.text
+					}
+					width: textMetrics.boundingRect.width < 500
+							? textMetrics.boundingRect.width : 500
                     color: "black"
+					wrapMode: width == 500 ? Text.WordWrap : Text.NoWrap
                     anchors.centerIn: parent
                     anchors.margins: 10
                 }
+
             }
 
             onCountChanged: {
@@ -123,13 +133,15 @@ Page {
                     id: messageField
                     Layout.fillWidth: true
                     placeholderText: qsTr("Poruka")
-                    wrapMode: TextArea.Wrap
+					wrapMode: Text.WordWrap
                     Keys.onPressed: {
                         if(event.key === Qt.Key_Return ){
                             Client.sendMsgData(inConversationWith, messageField.text.trim())
-                            Client.addMsgToBuffer(Client.getUsername(), inConversationWith, Client.splitMessage(messageField.text.trim()))
-                            messageModel.append({message: Client.splitMessage(messageField.text.trim()), index : 1});
+							Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text.trim())
+							messageModel.append({message: messageField.text.trim(), index : 1});
                             messageField.clear()
+							//so that textArea wouldnt read return key too
+							event.accepted = true
                         }
                     }
                 }
@@ -141,8 +153,8 @@ Page {
                     enabled: messageField.length > 0
                     onClicked: {
                         Client.sendMsgData(inConversationWith, messageField.text)
-                        Client.addMsgToBuffer(Client.getUsername(), inConversationWith, Client.splitMessage(messageField.text))
-                        messageModel.append({message: Client.splitMessage(messageField.text), index : 1});
+						Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text)
+						messageModel.append({message: messageField.text, index : 1});
                         messageField.clear()
                     }
                 }
