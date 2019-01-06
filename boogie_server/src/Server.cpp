@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QDataStream>
 
 #include <QDomDocument>
 
@@ -129,6 +130,12 @@ void Server::userDisconnected(){
 bool Server::sendMessageTo(QTcpSocket* recepient, const QJsonObject& message) const
 {
     QString tmp = packMessage(message);
+	int msgLength = tmp.size();
+	QByteArray byteArray;
+	QDataStream stream(&byteArray, QIODevice::WriteOnly);
+	stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
+	stream << msgLength;
+	recepient->write(byteArray);
     if(recepient->write(tmp.toLocal8Bit().data()) != -1){
         recepient->flush();
         return true;
@@ -145,7 +152,14 @@ bool Server::sendServerMessageTo(QTcpSocket* receipient, const MessageType& msgT
     if(username != ""){
         response.insert("to", username);
     }
-    bool ret = -1 != receipient->write(packMessage(response).toLocal8Bit().data());
+	QString tmp = packMessage(response).toLocal8Bit().data();
+	int msgLength = tmp.size();
+	QByteArray byteArray;
+	QDataStream stream(&byteArray, QIODevice::WriteOnly);
+	stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
+	stream << msgLength;
+	receipient->write(byteArray);
+	bool ret = -1 != receipient->write(tmp.toLocal8Bit().data());
     if(ret){
         receipient->flush();
     }
@@ -234,7 +248,6 @@ void Server::sendUnreadMessages(const QString& username, QTcpSocket* socket)
 {
     qDebug() << "Sending unread messages for " << username;
     for(auto message : m_unreadMessages[username]){
-        qDebug() << QJsonDocument(message).toJson(QJsonDocument::Compact);
         sendMessageTo(socket, message);
     }
     m_unreadMessages.remove(username);
@@ -307,25 +320,35 @@ bool Server::userExists(const QString& username) const
 
 void Server::readMessage(){
     QTcpSocket* senderSocket = qobject_cast<QTcpSocket*>(sender());
-
-    //reading first 4 characters, they represent length of json encoded message
-    QByteArray messageLength = senderSocket->read(4);
-
-    //check if sent data represents a number
-    if(!isNumeric(messageLength))
-    {
-        //reading all but not saving it since it is not in valid format
-        senderSocket->readAll();
-        sendServerMessageTo(senderSocket, MessageType::BadMessageFormat);
-        return;
-    }
+	int length = -1;
+	if(!m_socketBytesLeft.contains(senderSocket)
+		|| m_socketBytesLeft[senderSocket] == 0){//socket doesnt have any unread data
+		//reading first 4 characters, they represent length of json encoded message
+		//TODO: test if there is less then 4 bytes avalible
+		QByteArray messageLength = senderSocket->read(sizeof(int));
+		QDataStream stream(&messageLength, QIODevice::ReadOnly);
+		stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of QDataStream wouldn't change much
+		stream >> length;
+		qDebug() << "ARRIVED: " << length;
+		m_socketBytesLeft[senderSocket] = length;
+	}
+	if(senderSocket->bytesAvailable() < m_socketBytesLeft[senderSocket]){
+		//not everything has arived, we wait for new data
+		qDebug() << "missing " << m_socketBytesLeft[senderSocket] - senderSocket->bytesAvailable() << " bytes";
+		return;
+	}
+	//we are here if socket >= bytes avalibale
+	qDebug() << "NOTHING MISSING! " << senderSocket->bytesAvailable();
 
     //reading next messageLength bytes
+	QByteArray data = senderSocket->read(m_socketBytesLeft[senderSocket]);
+	m_socketBytesLeft[senderSocket] = 0;
     QJsonDocument jsonResponse = QJsonDocument::fromJson(
-                senderSocket->read(messageLength.toInt()));
+				data);
 
     //check if message is in valid json format
     if(jsonResponse.isNull()){
+		qDebug() << "BAD FORMAT";
         sendServerMessageTo(senderSocket, MessageType::BadMessageFormat);
         return;
     }
@@ -333,6 +356,7 @@ void Server::readMessage(){
     QJsonObject jsonResponseObject = jsonResponse.object();
 
     auto msgType = jsonResponseObject["type"];
+	qDebug() << msgType;
     //if sent json object is auth object
     if(msgType == MessageType::Authentication){
         authentication(jsonResponseObject, senderSocket);
@@ -351,7 +375,8 @@ void Server::readMessage(){
         forwardMessage(user, jsonResponseObject);
     }
     //if sent data is text message, forward it only to the intended recepient
-    else if(jsonResponseObject["type"] == MessageType::Text || jsonResponseObject["type"] == MessageType::Image){
+	else if(jsonResponseObject["type"] == MessageType::Text
+			|| jsonResponseObject["type"] == MessageType::Image){
         QString tmpTo = jsonResponseObject["to"].toString();
         QString tmpFrom = jsonResponseObject["from"].toString();
         if(!userExists(tmpTo))

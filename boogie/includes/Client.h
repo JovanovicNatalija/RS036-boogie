@@ -52,6 +52,7 @@ public:
     std::map<QString, QByteArray> mapOfImages;
     unsigned long counter = 0;
     int imageNum = 0;
+	int m_bytesToRead = 0;
 
 private:
     QString username;

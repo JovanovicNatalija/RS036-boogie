@@ -68,8 +68,24 @@ void Client::addNewContact(QString name, bool online) {
 }
 
 void Client::readMsg(){
-    QByteArray messageLength = read(4);
-    QJsonDocument jsonMsg = QJsonDocument::fromJson(read(messageLength.toInt()));
+	if(m_bytesToRead == 0)//we dont have any unread data
+	{
+		QByteArray messageLength = read(sizeof(int));
+		QDataStream stream(&messageLength, QIODevice::ReadOnly);
+		stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of QDataStream wouldn't change much
+		int length;
+		stream >> length;
+		qDebug() << "ARRIVED: " << length;
+		m_bytesToRead = length;
+	}
+	if(bytesAvailable() < m_bytesToRead){
+		qDebug() << "missing " << m_bytesToRead - bytesAvailable() << " bytes";
+		return;
+	}
+
+
+	QJsonDocument jsonMsg = QJsonDocument::fromJson(read(m_bytesToRead));
+	m_bytesToRead = 0;//we have read all there is for this message
     QJsonObject jsonMsgObj = jsonMsg.object();
     auto msgType = jsonMsgObj["type"];
 
@@ -135,7 +151,9 @@ void Client::readMsg(){
     else if (msgType == MessageType::Image){
         // ovako je samo dok ne proradi
         // TODO: popravi kada proradi
-        qDebug() << "stiglo je" << jsonMsgObj["counter"].toString();
+		//qDebug() << "stiglo je" << jsonMsgObj["counter"].toString();
+
+		qDebug() << "image from " << jsonMsgObj["from"];
         mapOfImages[jsonMsgObj["id"].toString()].append(jsonMsgObj["msg"].toString().toLatin1());
         if(jsonMsgObj["counter"].toString() == "end") {
             QPixmap p;
@@ -289,6 +307,12 @@ void Client::checkNewContact(QString name){
     jsonObject.insert("from", this->username);
     if(!jsonObject.empty()) {
         QString fullMsgString = packMessage(jsonObject);
+		int msgLength = fullMsgString.size();
+		QByteArray byteArray;
+		QDataStream stream(&byteArray, QIODevice::WriteOnly);
+		stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
+		stream << msgLength;
+		write(byteArray);
         sendMsg(fullMsgString);
     }
 }
@@ -300,30 +324,26 @@ void Client::sendPicture(QString filePath, QString to) {
     QBuffer buffer;
     buffer.open(QIODevice::WriteOnly);
     // TODO sta ako nije png
+	//TODO ovde naci ekstenziju slike(lastIndexOf("."))
     pix.save(&buffer, "png");
     auto const data = buffer.data().toBase64();
-    for(int i = 0; (i*9800) < data.size(); i++) {
-        qDebug() << i*9800 << "-" << data.size();
-        QJsonObject jsonMessageObject;
-        jsonMessageObject.insert("type", setMessageType(MessageType::Image));
-        jsonMessageObject.insert("from", username);
-        jsonMessageObject.insert("to", to);
-        if((i+1)*9800 < data.size()) {
-            //qDebug() << data.toString().mid(i*9800, 9800);
-            jsonMessageObject.insert("msg", QLatin1String(data.mid(i*9800, 9800)));
-            jsonMessageObject.insert("id", QString("img") + QString::number(imageNum));
-            jsonMessageObject.insert("counter", QString::number(i));
-        } else {
-            //qDebug() << data.toString().mid(i*9800);
-            jsonMessageObject.insert("msg", QLatin1String(data.mid(i*9800)));
-            jsonMessageObject.insert("id", QString("img") + QString::number(imageNum));
-            jsonMessageObject.insert("counter", "end");
-        }
-        if(!jsonMessageObject.empty()) {
-            QString fullMsgString = packMessage(jsonMessageObject);
-            sendMsg(fullMsgString);
-        }
-    }
+
+	QJsonObject jsonMessageObject;
+	jsonMessageObject.insert("type", setMessageType(MessageType::Image));
+	jsonMessageObject.insert("from", username);
+	jsonMessageObject.insert("to", to);
+	jsonMessageObject.insert("id", QString("img") + QString::number(imageNum));
+	jsonMessageObject.insert("msg", QLatin1String(data));
+	qDebug() << "image: " << data.size() << "string: " << QLatin1String(data).size();
+	QString msgString = packMessage(jsonMessageObject);
+	int msgLength = msgString.size();
+	QByteArray byteArray;
+	QDataStream stream(&byteArray, QIODevice::WriteOnly);
+	stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
+	stream << msgLength;
+	write(byteArray);
+	sendMsg(msgString);
+	flush();
     imageNum++;
 }
 
@@ -336,6 +356,12 @@ void Client::sendMsgData(QString to, QString msg) {
     jsonMessageObject.insert("msg", msg);
     if(!jsonMessageObject.empty()) {
         QString fullMsgString = packMessage(jsonMessageObject);
+		int msgLength = fullMsgString.size();
+		QByteArray byteArray;
+		QDataStream stream(&byteArray, QIODevice::WriteOnly);
+		stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
+		stream << msgLength;
+		write(byteArray);
         sendMsg(fullMsgString);
     }
 }
@@ -352,6 +378,12 @@ void Client::sendAuthData(QString password){
     jsonAuthObject.insert("username", username);
     if(!jsonAuthObject.empty()) {
         QString fullAuthString = packMessage(jsonAuthObject);
+		int msgLength = fullAuthString.size();
+		QByteArray byteArray;
+		QDataStream stream(&byteArray, QIODevice::WriteOnly);
+		stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
+		stream << msgLength;
+		write(byteArray);
         sendMsg(fullAuthString);
         //qDebug() << strJson << strJson.length() << fullAuthString;
     }
