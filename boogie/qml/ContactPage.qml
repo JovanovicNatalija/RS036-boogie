@@ -19,9 +19,6 @@ Page {
 
     Connections {
         target: Client
-        onBadPass: {
-			root.StackView.view.pop();
-        }
 
         onClearContacts: {
             contactModel.clear()
@@ -35,6 +32,8 @@ Page {
 
     ListView{
         width: parent.width
+        layoutDirection: Qt.RightToLeft
+        cacheBuffer: 316
         id: listView
         anchors.fill: parent
         topMargin: 48
@@ -55,7 +54,6 @@ Page {
                 id: newContactField
                 placeholderText: qsTr("Korisnicko ime")
                 selectByMouse: true
-
             }
             Button {
                 id: addContactButton
@@ -65,6 +63,24 @@ Page {
                     Client.checkNewContact(newContactField.text)
                     newContactField.clear()
                 }
+            }
+
+            Label{
+                id: msgLabel
+                font.pixelSize: 14
+                color: "red"
+            }
+
+            Connections {
+                target: Client
+                onBadContact: {
+                    msgLabel.text = msg
+                }
+            }
+
+            Keys.onReturnPressed: {
+                Client.checkNewContact(newContactField.text)
+                newContactField.clear()
             }
         }
 
