@@ -2,12 +2,13 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickView>
+#include <QQuickStyle>
 #include "includes/Client.h"
 
 int main(int argc, char *argv[])
 {
 	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-
+    QQuickStyle::setStyle("Material");
     QGuiApplication app(argc, argv);
 
     QQmlApplicationEngine engine;
