@@ -60,6 +60,7 @@ private:
 									const QString& text = "",
 									const QString& attribute = "",
 									const QString& value = "");
+	void addGroupToXml(const chatGroup& gr);
 
 	/*CONTACT FUNCTIONS*/
 	void addNewContact(const QString& tmpFrom, const QString& tmpTo);

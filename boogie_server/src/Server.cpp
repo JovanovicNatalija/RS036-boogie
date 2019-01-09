@@ -343,6 +343,21 @@ bool Server::isOnline(const QString& username) const
 	return m_usernameToSocket.contains(username);
 }
 
+void Server::addGroupToXml(const chatGroup& group){
+	QDomElement groupTag = createNewXmlElement("group", "",
+											   "groupName", group.groupName);
+	QDomElement groupId = createNewXmlElement("id", QString::number(group.id));
+	QDomElement members = createNewXmlElement("members");
+	for(auto member : group.members){
+		members.appendChild(createNewXmlElement("member", member));
+	}
+	groupTag.appendChild(groupId);
+	groupTag.appendChild(members);
+	m_dataDoc.documentElement().appendChild(groupTag);
+	saveXMLFile();
+
+}
+
 void Server::readMessage(){
 	QTcpSocket* senderSocket = qobject_cast<QTcpSocket*>(sender());
 
@@ -422,6 +437,7 @@ void Server::readMessage(){
 				m_unreadMessages[member].append(jsonResponseObject);
 			}
 		}
+		addGroupToXml(gr);
 	}
 	else
 	{
