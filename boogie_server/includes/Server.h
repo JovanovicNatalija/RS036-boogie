@@ -23,7 +23,7 @@ public:
 	Server(quint16 port);
 	bool isInitialized() const;
 	void showError() const;
-	~Server();
+	~Server() override;
 
 
 
@@ -46,7 +46,8 @@ private:
 	QHash<QString, QVector<QString>> m_contacts;
 	QHash<QString, QTcpSocket*> m_usernameToSocket;
 	QHash<QString, QVector<QJsonObject>> m_unreadMessages;
-
+	QVector<chatGroup> m_groups;
+	int m_nextGroupId = 0;
 	bool m_isInitialized;
 	std::string m_errorMessage;
 

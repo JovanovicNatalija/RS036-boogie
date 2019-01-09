@@ -400,6 +400,29 @@ void Server::readMessage(){
 			m_unreadMessages[tmpTo].append(jsonResponseObject);
 		}
 	}
+	else if(msgType == MessageType::CreateGroup){
+		QJsonArray jsonMemebers = jsonResponseObject["members"].toArray();
+		QSet<QString> groupMembers;
+		for(auto member: jsonMemebers){
+			groupMembers.insert(member.toVariant().toString());
+		}
+		QString groupName = jsonResponseObject["groupName"].toString();
+		chatGroup gr;
+		gr.groupName = groupName;
+		gr.members = groupMembers;
+		gr.id = m_nextGroupId;
+		m_nextGroupId++;
+		m_groups.push_back(gr);
+		jsonResponseObject["id"] = gr.id;
+		for(auto member: groupMembers){
+			if(isOnline(member)){
+				forwardMessage(member, jsonResponseObject);
+			}
+			else{
+				m_unreadMessages[member].append(jsonResponseObject);
+			}
+		}
+	}
 	else
 	{
 		qDebug() << "UNKNOWN MESSAGE TYPE";

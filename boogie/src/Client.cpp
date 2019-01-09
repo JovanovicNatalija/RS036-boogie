@@ -306,14 +306,14 @@ void Client::removeContactFromGroupSet(QString contact) {
 }
 
 void Client::sendGroupInfos(QString groupName) {
-    contactsInGropus.insert(m_username);
+	contactsInGropus.insert(m_username);
     QJsonObject groupDataJson;
     QJsonArray membersArrayJson;
     std::copy(contactsInGropus.begin(),
                    contactsInGropus.end(),
                    std::back_insert_iterator<QJsonArray>(membersArrayJson));
     groupDataJson.insert("type", setMessageType(MessageType::CreateGroup));
-    groupDataJson.insert("contacts", membersArrayJson);
+	groupDataJson.insert("members", membersArrayJson);
     groupDataJson.insert("groupName", groupName);
     if(!groupDataJson.empty()) {
         QString fullMsgString = packMessage(groupDataJson);
