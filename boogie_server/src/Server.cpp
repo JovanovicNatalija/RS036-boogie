@@ -8,6 +8,8 @@
 #include <QJsonArray>
 #include <QDataStream>
 
+#include <QSslSocket>
+
 #include <QDomDocument>
 
 #include <iostream>
@@ -19,23 +21,67 @@ Server::~Server(){}
 
 Server::Server(quint16 port)
 {
-    m_isInitialized = true;
-    if(port <= 1024){//first 1024 ports are not to be touched
-        m_errorMessage = "BAD PORT NUMBER";
-        m_isInitialized = false;
-    }
+	QFile keyFile("../certs/red_local.key");
+	keyFile.open(QIODevice::ReadOnly);
+	key = QSslKey(keyFile.readAll(), QSsl::Rsa);
+	keyFile.close();
 
-    bool listening = listen(QHostAddress::Any, port);
-    if(listening == false){
-        m_errorMessage = "SERVER ERROR, CAN'T LISTEN ON PORT "
-                         + std::to_string(port);
-        m_isInitialized = false;
-    }
+	QFile certFile("../certs/red_local.pem");
+	certFile.open(QIODevice::ReadOnly);
+	cert = QSslCertificate(certFile.readAll());
+	certFile.close();
 
-    loadData();
 
-    connect(this, &QTcpServer::newConnection, this, &Server::newConnection);
-    qDebug("server created");
+	m_isInitialized = true;
+	if(port <= 1024){//first 1024 ports are not to be touched
+		m_errorMessage = "BAD PORT NUMBER";
+		m_isInitialized = false;
+	}
+
+	bool listening = listen(QHostAddress::Any, port);
+	if(listening == false){
+		m_errorMessage = "SERVER ERROR, CAN'T LISTEN ON PORT "
+						 + std::to_string(port);
+		m_isInitialized = false;
+	}
+
+	loadData();
+
+	connect(this, &QTcpServer::newConnection, this, &Server::newConnection);
+	qDebug("server created");
+}
+
+void Server::incomingConnection(qintptr socketDescriptor)
+{
+	QSslSocket *newConnection = new QSslSocket(this);
+
+	//this has to be in qt4 syntax
+	connect(newConnection, SIGNAL(sslErrors(QList<QSslError>)),
+			this, SLOT(sslErrors(QList<QSslError>)));
+
+	newConnection->setSocketDescriptor(socketDescriptor);
+
+	//encryption keys and certificates
+	newConnection->setPrivateKey(key);
+	newConnection->setLocalCertificate(cert);
+	newConnection->addCaCertificates("../certs/blue_ca.pem");
+	newConnection->setPeerVerifyMode(QSslSocket::VerifyPeer);
+	newConnection->startServerEncryption();
+
+	addPendingConnection(newConnection);
+}
+
+void Server::sslErrors(const QList<QSslError> &errors)
+{
+	QSslSocket *senderSocket = qobject_cast<QSslSocket *>(QObject::sender());
+	foreach (const QSslError &error, errors){
+		if(error.error() == QSslError::SelfSignedCertificate){//ignoring self signed cert
+			QList<QSslError> expectedSslErrors;
+			expectedSslErrors.append(error);
+			senderSocket->ignoreSslErrors(expectedSslErrors);
+		}
+	}
+
 }
 
 void Server::loadData(){
@@ -200,24 +246,22 @@ QDomElement Server::createNewXmlElement(const QString& tagName,
 //adds contact to array of contacts and to DOM
 void Server::addNewContact(const QString& user, const QString& contact)
 {
-    m_contacts[user].append(contact);
+	m_contacts[user].append(contact);
 
-    //first user in xml
+	QDomNode userDomElement;
+	int i = 0;
 
-    QDomNode userDomElement;
-    int i = 0;
-
-    //find dom element for given user
-    for(i = 0;i < m_users.count();++i){
-        userDomElement = m_users.at(i);
-        if(userDomElement.attributes().namedItem("username").nodeValue() == user)
-        {
-            QDomElement newContact = createNewXmlElement("contact", contact);
-            userDomElement.firstChildElement("contacts").appendChild(newContact);
-            saveXMLFile();
-            break;
-        }
-    }
+	//find dom element for given user
+	for(i = 0;i < m_users.count();++i){
+		userDomElement = m_users.at(i);
+		if(userDomElement.attributes().namedItem("username").nodeValue() == user)
+		{
+			QDomElement newContact = createNewXmlElement("contact", contact);
+			userDomElement.firstChildElement("contacts").appendChild(newContact);
+			saveXMLFile();
+			break;
+		}
+	}
 }
 
 bool isNumeric(QByteArray arr){
@@ -261,29 +305,27 @@ bool Server::hasUnreadMessages(const QString& username) const
 
 void Server::authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSocket)
 {
-    if(m_usernameToSocket.contains(jsonResponseObject["username"].toString())){
-        qDebug() << "ALLREADY LOGGED IN";
-        sendServerMessageTo(senderSocket,MessageType::AllreadyLoggedIn);
-        senderSocket->disconnectFromHost();
-    }
-    else if(checkPassword(jsonResponseObject) == false){
-        qDebug() << "BAD PASS";
+	if(m_usernameToSocket.contains(jsonResponseObject["username"].toString())){
+		qDebug() << "ALLREADY LOGGED IN";
+		sendServerMessageTo(senderSocket,MessageType::AllreadyLoggedIn);
+	}
+	else if(checkPassword(jsonResponseObject) == false){
+		qDebug() << "BAD PASS";
         sendServerMessageTo(senderSocket,MessageType::BadPass);
-        senderSocket->disconnectFromHost();
-    }
-    else{
-        //helper var, just for nicer code;
-        QString tmpUsername = jsonResponseObject["username"].toString();
+	}
+	else{
+		//helper var, just for nicer code;
+		QString tmpUsername = jsonResponseObject["username"].toString();
 
-        qDebug() << "AUTH FOR USER " << tmpUsername << " SUCCESSFUL";
+		qDebug() << "AUTH FOR USER " << tmpUsername << " SUCCESSFUL";
 
-        sendContactsFor(tmpUsername, senderSocket);
-        notifyContacts(tmpUsername, MessageType::ContactLogin);
-        if(hasUnreadMessages(tmpUsername)){
-            sendUnreadMessages(tmpUsername, senderSocket);
-        }
-        m_usernameToSocket[tmpUsername] = senderSocket;
-    }
+		sendContactsFor(tmpUsername, senderSocket);
+		notifyContacts(tmpUsername, MessageType::ContactLogin);
+		if(hasUnreadMessages(tmpUsername)){
+			sendUnreadMessages(tmpUsername, senderSocket);
+		}
+		m_usernameToSocket[tmpUsername] = senderSocket;
+	}
 }
 
 void Server::checkContactExistence(const QString& tmpFrom, const QString& tmpTo)
@@ -379,10 +421,6 @@ void Server::readMessage(){
 			|| jsonResponseObject["type"] == MessageType::Image){
         QString tmpTo = jsonResponseObject["to"].toString();
         QString tmpFrom = jsonResponseObject["from"].toString();
-        if(!userExists(tmpTo))
-        {
-            sendServerMessageTo(senderSocket,MessageType::UnknownUser,tmpFrom);
-        }
 
         if(jsonResponseObject["type"] == MessageType::Image) {
             qDebug() << jsonResponseObject["id"].toString() << " - " << jsonResponseObject["counter"].toString();

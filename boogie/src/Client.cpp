@@ -1,4 +1,4 @@
-#include "Client.h"
+﻿#include "Client.h"
 #include <iostream>
 #include <QJsonObject>
 #include <QJsonDocument>
@@ -22,23 +22,50 @@
 #include <QImageWriter>
 
 Client::Client(QObject* parrent)
-    :QTcpSocket(parrent)
+    :QSslSocket(parrent)
 {
+    //setting ssl certificates
+    setLocalCertificate("../certs/blue_local.pem");
+    setPrivateKey("../certs/blue_local.key");
+    setPeerVerifyMode(QSslSocket::VerifyPeer);
+    connect(this,  SIGNAL(sslErrors(QList<QSslError>)), this,
+            SLOT(sslErrors(QList<QSslError>)));
+
     std::cout << "Client created" << std::endl;
 }
 
-QString Client::getUsername() {
-    return username;
+QString Client::username() {
+    return m_username;
 }
 
-void Client::connectToServer(QString username, QString ip, quint16 port) {
-    connectToHost(ip, port);
+void Client::sslErrors(const QList<QSslError> &errors)
+{
+    foreach (const QSslError &error, errors){
+        if(error.error() == QSslError::SelfSignedCertificate){//ignoring self signed cert
+            QList<QSslError> expectedSslErrors;
+            expectedSslErrors.append(error);
+            ignoreSslErrors(expectedSslErrors);
+        }
+    }
+}
 
+
+
+void Client::connectToServer(const QString& username, const QString& ip,
+                             quint16 port) {
+    connectToHostEncrypted(ip, port);
+
+    if(waitForEncrypted(3000)){
+        qDebug() << "Encrypted connection established";
+    }
+    else{
+        std::cerr << "Unable to connect to server" << std::endl;
+        return;
+    }
     connect(this, SIGNAL(readyRead()), this, SLOT(readMsg()));
 
-    this->username = username;
+    this->m_username = username;
 
-    std::cout << "Connected to host" << std::endl;
 }
 
 void Client::disconnectFromServer() {
@@ -46,109 +73,86 @@ void Client::disconnectFromServer() {
     std::cout << "Disconected from host" << std::endl;
 }
 
-//Currently unused, uncomment and fix if needed
-//QString Client::splitMessage(QString message) {
-//    int helper = 0;
-//    for(int i = 0; i < message.length(); i++){
-//        if(i - helper ==  50) {
-//            message.insert(i, "\n");
-//            helper = i;
-//        }
-//    }
-//    return message;
-//}
+void Client::addNewContact(const QString& name, bool online) {
 
-void Client::addNewContact(QString name, bool online) {
-
-    if(contactInfos[name] != true)
-        contactInfos[name] = online;
+    if(m_contactInfos[name] != true)
+        m_contactInfos[name] = online;
     emit clearContacts();
-    for(auto &pair: contactInfos){
-        emit showContacts(pair.first, pair.second);
+    for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
+        emit showContacts(i.key(), i.value());
     }
 }
 
 void Client::readMsg(){
-	if(m_bytesToRead == 0)//we dont have any unread data
-	{
-		QByteArray messageLength = read(sizeof(int));
-		QDataStream stream(&messageLength, QIODevice::ReadOnly);
-		stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of QDataStream wouldn't change much
-		int length;
-		stream >> length;
-		qDebug() << "ARRIVED: " << length;
-		m_bytesToRead = length;
-	}
-	if(bytesAvailable() < m_bytesToRead){
-		qDebug() << "missing " << m_bytesToRead - bytesAvailable() << " bytes";
-		return;
-	}
+    if(m_bytesToRead == 0)//we dont have any unread data
+    {
+        QByteArray messageLength = read(sizeof(int));
+        QDataStream stream(&messageLength, QIODevice::ReadOnly);
+        stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of QDataStream wouldn't change much
+        int length;
+        stream >> length;
+        qDebug() << "ARRIVED: " << length;
+        m_bytesToRead = length;
+    }
+    if(bytesAvailable() < m_bytesToRead){
+        qDebug() << "missing " << m_bytesToRead - bytesAvailable() << " bytes";
+        return;
+    }
 
 
-	QJsonDocument jsonMsg = QJsonDocument::fromJson(read(m_bytesToRead));
-	m_bytesToRead = 0;//we have read all there is for this message
+    QJsonDocument jsonMsg = QJsonDocument::fromJson(read(m_bytesToRead));
+    m_bytesToRead = 0;//we have read all there is for this message
+
     QJsonObject jsonMsgObj = jsonMsg.object();
     auto msgType = jsonMsgObj["type"];
 
-    if(jsonMsgObj.contains("to") && jsonMsgObj["to"].toString() != username) {
-        qDebug() << "Received msg is not for " << username;
+    if(jsonMsgObj.contains("to") && jsonMsgObj["to"].toString() != m_username) {
+        qDebug() << "Received msg is not for " << m_username;
         return;
     }
     if(msgType == MessageType::Text){
         QString message = jsonMsgObj["msg"].toString();
 
-		//message = splitMessage(message);
-		addMsgToBuffer(jsonMsgObj["from"].toString(),
-						jsonMsgObj["from"].toString(),
+        //message = splitMessage(message);
+        addMsgToBuffer(jsonMsgObj["from"].toString(),
+                        jsonMsgObj["from"].toString(),
                         message);
 
         emit showMsg(jsonMsgObj["from"].toString(),
                     message);
-
     }
     else if(msgType == MessageType::Contacts){
         QJsonArray contactsJsonArray = jsonMsgObj["contacts"].toArray();
         for(auto con : contactsJsonArray){
             QJsonObject jsonObj = con.toObject();
-            contactInfos[jsonObj["contact"].toString()] = jsonObj["online"].toBool();
+            m_contactInfos[jsonObj["contact"].toString()] = jsonObj["online"].toBool();
             //emit showContacts(jsonObj["contact"].toString(), jsonObj["online"].toBool());
         }
 
-        for(auto &pair: contactInfos){
-            emit showContacts(pair.first, pair.second);
+        for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
+            emit showContacts(i.key(), i.value());
         }
     }
     else if(msgType == MessageType::ContactLogin){
-        contactInfos[jsonMsgObj["contact"].toString()] = true;
+        m_contactInfos[jsonMsgObj["contact"].toString()] = true;
         emit clearContacts();
-        for(auto &pair: contactInfos){
-            emit showContacts(pair.first, pair.second);
+        for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
+            emit showContacts(i.key(), i.value());
         }
-
     }
     else if(msgType == MessageType::ContactLogout){
-        contactInfos[jsonMsgObj["contact"].toString()] = false;
+        m_contactInfos[jsonMsgObj["contact"].toString()] = false;
         emit clearContacts();
-        for(auto &pair: contactInfos){
-            emit showContacts(pair.first, pair.second);
+        for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
+            emit showContacts(i.key(), i.value());
         }
     }
     else if(msgType == MessageType::AddNewContact) {
         if(jsonMsgObj["exists"].toBool() == true)
             addNewContact(jsonMsgObj["username"].toString(), jsonMsgObj["online"].toBool());
-    }
-    else if(msgType == MessageType::BadPass){
-        qDebug() << "losa lozinka";
-        emit badPass();
-    }
-    else if(msgType == MessageType::AllreadyLoggedIn){
-        //TODO
-    }
-    else if(msgType == MessageType::BadMessageFormat){
-        //TODO
-    }
-    else if(msgType == MessageType::UnknownUser){
-        //TODO
+        else {
+            emit badContact(QString("Trazeni kontakt ne postoji!"));
+        }
     }
     else if (msgType == MessageType::Image){
         // ovako je samo dok ne proradi
@@ -161,7 +165,16 @@ void Client::readMsg(){
         writer.write(image);
         showPicture("file://" + QFileInfo(jsonMsgObj["id"].toString() + ".png").absoluteFilePath());
     }
-    else {
+    else if(msgType == MessageType::BadPass){
+        emit badPass();
+    }
+    else if(msgType == MessageType::AllreadyLoggedIn){
+        emit alreadyLogIn();
+    }
+    else if(msgType == MessageType::BadMessageFormat){
+        qDebug() << "Ne znas da programiras :p";
+    }
+    else{
         qDebug() << "UNKNOWN MESSAGE TYPE";
     }
 
@@ -174,41 +187,40 @@ void Client::readMsg(){
     }
 }
 
-
-void Client::sendMsg(QString str) {
+void Client::sendMsg(const QString& str) {
     write(str.toLocal8Bit().data());
 }
 
 //dodajemo poruku u bafer
-void Client::addMsgToBuffer(QString sender, QString inConversationWith, QString msg) {
+void Client::addMsgToBuffer(const QString& sender,const QString& inConversationWith,const QString& msg) {
     //hvatamo trenutno vreme i pretvaramo ga u string zbog lakseg upisivanja u xml
     auto start = std::chrono::system_clock::now();
     std::time_t end_time = std::chrono::system_clock::to_time_t(start);
     std::tm * ptm = std::localtime(&end_time);
     char time[32];
     std::strftime(time, 32, "%d.%m.%Y %H:%M:%S", ptm);
-    if(msgDataBuffer.find(inConversationWith) == msgDataBuffer.end()) {
-        msgInfos[inConversationWith] = 0;
+    if(m_msgDataBuffer.find(inConversationWith) == m_msgDataBuffer.end()) {
+        m_msgIndexBegin[inConversationWith] = 0;
     }
-    msgDataBuffer[inConversationWith].push_back(std::make_tuple(sender, msg, time));
-    counter++;
-    if(counter == 10) {
+    m_msgDataBuffer[inConversationWith].push_back(std::make_tuple(sender, msg, time));
+    m_msgCounter++;
+    if(m_msgCounter == 10) {
         writeInXml();
     }
 }
 
-void Client::displayOnConvPage(QString inConversationWith) {
-    auto messages = msgDataBuffer.find(inConversationWith);
-    if(messages == msgDataBuffer.end())
+void Client::displayOnConvPage(const QString& inConversationWith) {
+    auto messages = m_msgDataBuffer.find(inConversationWith);
+    if(messages == m_msgDataBuffer.end())
         return;
-    for(auto message: messages->second) {
+    for(auto message: messages.value()) {
         emit showMsg(std::get<0>(message), std::get<1>(message));
     }
 }
 
 
-void Client::createXml() {
-    QString filePath = username + ".xml";
+void Client::createXml() const {
+    QString filePath = m_username + ".xml";
     QFile data(filePath);
           if (!data.open(QFile::WriteOnly | QFile::Truncate))
               return;
@@ -225,7 +237,7 @@ void Client::createXml() {
 
 // pisemo istoriju ceta u xml fajl
 void Client::writeInXml() {
-    QString filePath = username + ".xml";
+    QString filePath = m_username + ".xml";
 
     if(!(QFileInfo::exists(filePath) && QFileInfo(filePath).isFile())) {
         createXml();
@@ -241,32 +253,32 @@ void Client::writeInXml() {
     qint64 offset = data.size() - QString("</messages>").size() - 1;
     data.seek(offset);
 
-    auto messages = msgDataBuffer.begin();
-    while(messages != msgDataBuffer.end())
+    auto messages = m_msgDataBuffer.begin();
+    while(messages != m_msgDataBuffer.end())
     {
-        auto from = msgInfos[messages->first];
-        auto to = messages->second.size();
+        auto from = m_msgIndexBegin[messages.key()];
+        auto to = messages.value().size();
         for(auto i = from; i < to; i++) {
-            auto message = messages->second[i];
+            auto message = messages.value()[i];
             xml.writeStartElement("message");
-            xml.writeTextElement("inConversationWith", messages->first);
+            xml.writeTextElement("inConversationWith", messages.key());
             xml.writeTextElement("sender", std::get<0>(message));
             xml.writeTextElement("text", std::get<1>(message));
             xml.writeTextElement("time", std::get<2>(message));
             xml.writeEndElement();
         }
-        msgInfos[messages->first] = to;
+        m_msgIndexBegin[messages.key()] = to;
         messages++;
     }
 
     QTextStream stream(&data);
     stream << "\n</messages>";
     data.close();
-    counter = 0;
+    m_msgCounter = 0;
 }
 
 void Client::readFromXml() {
-    QString filePath = username + ".xml";
+    QString filePath = m_username + ".xml";
 
     QFile data(filePath);
     if (!data.open(QFile::ReadOnly))
@@ -285,11 +297,11 @@ void Client::readFromXml() {
             QString text = xml.readElementText();
             xml.readNextStartElement();
             QString time = xml.readElementText();
-            msgDataBuffer[inConversationWith].push_back(std::make_tuple(sender, text, time));
-            if(msgInfos.find(inConversationWith) == msgInfos.end())
-                msgInfos[inConversationWith] = 1;
+            m_msgDataBuffer[inConversationWith].push_back(std::make_tuple(sender, text, time));
+            if(m_msgIndexBegin.find(inConversationWith) == m_msgIndexBegin.end())
+                m_msgIndexBegin[inConversationWith] = 1;
             else
-                msgInfos[inConversationWith]++;
+                m_msgIndexBegin[inConversationWith]++;
        }
     }
 
@@ -297,24 +309,27 @@ void Client::readFromXml() {
 }
 
 //saljemo serveru username novog kontakta, da bi proverili da li taj kontakt postoji
-void Client::checkNewContact(QString name){
+void Client::checkNewContact(const QString& name) {
+    if(name == m_username) {
+        badContact(QString("Ne mozete pricati sami sa sobim,\n nije socijalno prihvatljivo"));
+    }
     QJsonObject jsonObject;
     jsonObject.insert("type", setMessageType(MessageType::AddNewContact));
     jsonObject.insert("username", name);
-    jsonObject.insert("from", this->username);
+    jsonObject.insert("from", this->m_username);
     if(!jsonObject.empty()) {
         QString fullMsgString = packMessage(jsonObject);
-		int msgLength = fullMsgString.size();
-		QByteArray byteArray;
-		QDataStream stream(&byteArray, QIODevice::WriteOnly);
-		stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
-		stream << msgLength;
-		write(byteArray);
+        int msgLength = fullMsgString.size();
+        QByteArray byteArray;
+        QDataStream stream(&byteArray, QIODevice::WriteOnly);
+        stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
+        stream << msgLength;
+        write(byteArray);
         sendMsg(fullMsgString);
     }
 }
 
-void Client::sendPicture(QString filePath, QString to) {
+void Client::sendPicture(const QString& filePath,const QString& to) {
     QImageReader reader(QUrl(filePath).toLocalFile());
     QImage img = reader.read();
     auto pix = QPixmap::fromImage(img);
@@ -325,40 +340,40 @@ void Client::sendPicture(QString filePath, QString to) {
     pix.save(&buffer, "png");
     auto const data = buffer.data().toBase64();
 
-	QJsonObject jsonMessageObject;
-	jsonMessageObject.insert("type", setMessageType(MessageType::Image));
-	jsonMessageObject.insert("from", username);
-	jsonMessageObject.insert("to", to);
-	jsonMessageObject.insert("id", QString("img") + QString::number(imageNum));
-	jsonMessageObject.insert("msg", QLatin1String(data));
-	qDebug() << "image: " << data.size() << "string: " << QLatin1String(data).size();
-	QString msgString = packMessage(jsonMessageObject);
-	int msgLength = msgString.size();
-	QByteArray byteArray;
-	QDataStream stream(&byteArray, QIODevice::WriteOnly);
-	stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
-	stream << msgLength;
-	write(byteArray);
-	sendMsg(msgString);
-	flush();
+    QJsonObject jsonMessageObject;
+    jsonMessageObject.insert("type", setMessageType(MessageType::Image));
+    jsonMessageObject.insert("from", m_username);
+    jsonMessageObject.insert("to", to);
+    jsonMessageObject.insert("id", QString("img") + QString::number(imageNum));
+    jsonMessageObject.insert("msg", QLatin1String(data));
+    qDebug() << "image: " << data.size() << "string: " << QLatin1String(data).size();
+    QString msgString = packMessage(jsonMessageObject);
+    int msgLength = msgString.size();
+    QByteArray byteArray;
+    QDataStream stream(&byteArray, QIODevice::WriteOnly);
+    stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
+    stream << msgLength;
+    write(byteArray);
+    sendMsg(msgString);
+    flush();
     imageNum++;
 }
 
 //saljemo poruku i podatke o njoj na server
-void Client::sendMsgData(QString to, QString msg) {
+void Client::sendMsgData(const QString& to,const QString& msg) {
     QJsonObject jsonMessageObject;
     jsonMessageObject.insert("type", setMessageType(MessageType::Text));
-    jsonMessageObject.insert("from", username);
+    jsonMessageObject.insert("from", m_username);
     jsonMessageObject.insert("to", to);
     jsonMessageObject.insert("msg", msg);
     if(!jsonMessageObject.empty()) {
         QString fullMsgString = packMessage(jsonMessageObject);
-		int msgLength = fullMsgString.size();
-		QByteArray byteArray;
-		QDataStream stream(&byteArray, QIODevice::WriteOnly);
-		stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
+        int msgLength = fullMsgString.size();
+        QByteArray byteArray;
+        QDataStream stream(&byteArray, QIODevice::WriteOnly);
+        stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
         stream << msgLength;
-		write(byteArray);
+        write(byteArray);
         sendMsg(fullMsgString);
     }
 }
@@ -372,15 +387,15 @@ void Client::sendAuthData(QString password){
             QString(QCryptographicHash::hash((password.toLocal8Bit().data()),
                                              QCryptographicHash::Md5).toHex());
     jsonAuthObject.insert("password", hashedPassword);
-    jsonAuthObject.insert("username", username);
+    jsonAuthObject.insert("username", m_username);
     if(!jsonAuthObject.empty()) {
         QString fullAuthString = packMessage(jsonAuthObject);
-		int msgLength = fullAuthString.size();
-		QByteArray byteArray;
-		QDataStream stream(&byteArray, QIODevice::WriteOnly);
-		stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
-		stream << msgLength;
-		write(byteArray);
+        int msgLength = fullAuthString.size();
+        QByteArray byteArray;
+        QDataStream stream(&byteArray, QIODevice::WriteOnly);
+        stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
+        stream << msgLength;
+        write(byteArray);
         sendMsg(fullAuthString);
         //qDebug() << strJson << strJson.length() << fullAuthString;
     }

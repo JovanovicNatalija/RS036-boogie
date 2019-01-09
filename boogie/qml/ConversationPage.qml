@@ -7,6 +7,7 @@ import QtQuick.Controls 2.4
 import QtQuick.Window 2.2
 import QtQuick.Dialogs 1.3
 
+
 Page {
     id: root
 
@@ -80,8 +81,6 @@ Page {
         }
     }
 
-
-
     ColumnLayout {
         anchors.fill: parent
 
@@ -127,8 +126,6 @@ Page {
                     }
                 }
 
-
-
                 Component {
                     id: imageMsg
                     Image {
@@ -162,15 +159,13 @@ Page {
                     Layout.fillWidth: true
                     placeholderText: qsTr("Poruka")
 					wrapMode: Text.WordWrap
-                    Keys.onPressed: {
-                        if(event.key === Qt.Key_Return ){
+                    Keys.onReturnPressed: {
+                        if(messageField.text.trim() !== "") {
                             Client.sendMsgData(inConversationWith, messageField.text.trim())
-							Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text.trim())
-                            messageModel.append({message: messageField.text.trim(), index : 1, image: false});
-                            messageField.clear()
-							//so that textArea wouldnt read return key too
-							event.accepted = true
+                            Client.addMsgToBuffer(Client.username(), inConversationWith, messageField.text.trim())
+                            messageModel.append({message: messageField.text.trim(), index : 1})
                         }
+                        messageField.clear()
                     }
                 }
 
@@ -180,9 +175,11 @@ Page {
                     text: qsTr("Posalji")
                     enabled: messageField.length > 0
                     onClicked: {
-                        Client.sendMsgData(inConversationWith, messageField.text)
-						Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text)
-                        messageModel.append({message: messageField.text, index : 1, image: false});
+                        if(messageField.text.trim() !== "") {
+                            Client.sendMsgData(inConversationWith, messageField.text.trim())
+                            Client.addMsgToBuffer(Client.username(), inConversationWith, Client.splitMessage(messageField.text.trim()))
+                            messageModel.append({message: Client.splitMessage(messageField.text.trim()), index : 1});
+                        }
                         messageField.clear()
                     }
                 }
