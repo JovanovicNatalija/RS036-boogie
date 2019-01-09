@@ -7,6 +7,8 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 
+#include <QSslSocket>
+
 #include <QDomDocument>
 
 #include <iostream>
@@ -18,6 +20,17 @@ Server::~Server(){}
 
 Server::Server(quint16 port)
 {
+	QFile keyFile("../certs/red_local.key");
+	keyFile.open(QIODevice::ReadOnly);
+	key = QSslKey(keyFile.readAll(), QSsl::Rsa);
+	keyFile.close();
+
+	QFile certFile("../certs/red_local.pem");
+	certFile.open(QIODevice::ReadOnly);
+	cert = QSslCertificate(certFile.readAll());
+	certFile.close();
+
+
 	m_isInitialized = true;
 	if(port <= 1024){//first 1024 ports are not to be touched
 		m_errorMessage = "BAD PORT NUMBER";
@@ -35,6 +48,39 @@ Server::Server(quint16 port)
 
 	connect(this, &QTcpServer::newConnection, this, &Server::newConnection);
 	qDebug("server created");
+}
+
+void Server::incomingConnection(qintptr socketDescriptor)
+{
+	QSslSocket *newConnection = new QSslSocket(this);
+
+	//this has to be in qt4 syntax
+	connect(newConnection, SIGNAL(sslErrors(QList<QSslError>)),
+			this, SLOT(sslErrors(QList<QSslError>)));
+
+	newConnection->setSocketDescriptor(socketDescriptor);
+
+	//encryption keys and certificates
+	newConnection->setPrivateKey(key);
+	newConnection->setLocalCertificate(cert);
+	newConnection->addCaCertificates("../certs/blue_ca.pem");
+	newConnection->setPeerVerifyMode(QSslSocket::VerifyPeer);
+	newConnection->startServerEncryption();
+
+	addPendingConnection(newConnection);
+}
+
+void Server::sslErrors(const QList<QSslError> &errors)
+{
+	QSslSocket *senderSocket = qobject_cast<QSslSocket *>(QObject::sender());
+	foreach (const QSslError &error, errors){
+		if(error.error() == QSslError::SelfSignedCertificate){//ignoring self signed cert
+			QList<QSslError> expectedSslErrors;
+			expectedSslErrors.append(error);
+			senderSocket->ignoreSslErrors(expectedSslErrors);
+		}
+	}
+
 }
 
 void Server::loadData(){
@@ -187,8 +233,6 @@ QDomElement Server::createNewXmlElement(const QString& tagName,
 void Server::addNewContact(const QString& user, const QString& contact)
 {
 	m_contacts[user].append(contact);
-
-	//first user in xml
 
 	QDomNode userDomElement;
 	int i = 0;

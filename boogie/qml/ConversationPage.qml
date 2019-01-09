@@ -94,7 +94,7 @@ Page {
                     if(index) parent.right
                 }
 
-                Label {
+				Label {
                     id: lblMsg
                     text: model.message
 					//used to get text width in pixels
@@ -109,6 +109,7 @@ Page {
 					wrapMode: width == 500 ? Text.WordWrap : Text.NoWrap
                     anchors.centerIn: parent
                     anchors.margins: 10
+
                 }
 
             }

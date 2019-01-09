@@ -16,8 +16,16 @@
 #include <QCryptographicHash>
 
 Client::Client(QObject* parrent)
-    :QTcpSocket(parrent)
+	:QSslSocket(parrent)
 {
+
+	//setting ssl certificates
+	setLocalCertificate("../certs/blue_local.pem");
+	setPrivateKey("../certs/blue_local.key");
+	setPeerVerifyMode(QSslSocket::VerifyPeer);
+	connect(this,  SIGNAL(sslErrors(QList<QSslError>)), this,
+			SLOT(sslErrors(QList<QSslError>)));
+
 	std::cout << "Client created" << std::endl;
 }
 
@@ -25,14 +33,32 @@ QString Client::getUsername() {
     return username;
 }
 
-void Client::connectToServer(QString username, QString ip, quint16 port) {
-    connectToHost(ip, port);
+void Client::sslErrors(const QList<QSslError> &errors)
+{
+	foreach (const QSslError &error, errors){
+		if(error.error() == QSslError::SelfSignedCertificate){//ignoring self signed cert
+			QList<QSslError> expectedSslErrors;
+			expectedSslErrors.append(error);
+			ignoreSslErrors(expectedSslErrors);
+		}
+	}
+}
 
+
+void Client::connectToServer(QString username, QString ip, quint16 port) {
+	connectToHostEncrypted(ip, port);
+
+	if(waitForEncrypted(3000)){
+		qDebug() << "Encrypted connection established";
+	}
+	else{
+		std::cerr << "Unable to connect to server" << std::endl;
+		return;
+	}
 	connect(this, SIGNAL(readyRead()), this, SLOT(readMsg()));
 
     this->username = username;
 
-    std::cout << "Connected to host" << std::endl;
 }
 
 void Client::disconnectFromServer() {
@@ -191,7 +217,7 @@ void Client::createXml() {
 }
 
 // pisemo istoriju ceta u xml fajl
-// ok
+
 void Client::writeInXml() {
     QString filePath = username + ".xml";
 
