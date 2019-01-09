@@ -14,6 +14,7 @@
 #include "../util/util.h"
 #include <map>
 #include <QCryptographicHash>
+#include <QSet>
 
 Client::Client(QObject* parrent)
 	:QSslSocket(parrent)
@@ -292,6 +293,41 @@ void Client::checkNewContact(const QString& name) {
     }
 }
 
+void Client::addContactToGroupSet(QString contact) {
+    if(!contactsInGropus.contains(contact)){
+        contactsInGropus.insert(contact);
+    }
+}
+
+void Client::removeContactFromGroupSet(QString contact) {
+    if(contactsInGropus.contains(contact)){
+        contactsInGropus.remove(contact);
+    }
+}
+
+void Client::sendGroupInfos(QString groupName) {
+    contactsInGropus.insert(m_username);
+    QJsonObject groupDataJson;
+    QJsonArray contactsArrayJson;
+    std::copy(contactsInGropus.begin(),
+                   contactsInGropus.end(),
+                   std::back_insert_iterator<QJsonArray>(contactsArrayJson));
+    groupDataJson.insert("type", setMessageType(MessageType::CreateGroup));
+    groupDataJson.insert("contacts", contactsArrayJson);
+    groupDataJson.insert("groupName", groupName);
+    if(!jsonMessageObject.empty()) {
+        QString fullMsgString = packMessage(jsonMessageObject);
+        sendMsg(fullMsgString);
+    }
+    emit clearContacts();
+    for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
+        emit showContacts(i.key(), i.value());
+    }
+}
+
+void Client::clearGroupSet() {
+    contactsInGropus.clear();
+}
 void Client::sendPicture(const QString& filePath)  {
     qDebug() << filePath;
 }

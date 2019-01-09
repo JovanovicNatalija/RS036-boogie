@@ -42,45 +42,57 @@ Page {
         rightMargin: 48
         spacing: 20
         model: contactModel
-        header: RowLayout {
+        header: ColumnLayout {
             id: glMainLayout
             width: parent.width
-            Label{
-               id: addContact
-               text: qsTr("Novi kontakt:")
-               font.pixelSize: 15
-            }
-            TextField {
-                id: newContactField
-                placeholderText: qsTr("Korisnicko ime")
-                selectByMouse: true
-            }
-            Button {
-                id: addContactButton
-                text: qsTr("Dodaj novi kontakt")
-                enabled: newContactField.length > 0
-                onClicked: {
+
+            RowLayout{
+                Label{
+                   id: addContact
+                   text: qsTr("Novi kontakt:")
+                   font.pixelSize: 15
+                }
+                TextField {
+                    id: newContactField
+                    placeholderText: qsTr("Korisnicko ime")
+                    selectByMouse: true
+                }
+                Button {
+                    id: addContactButton
+                    text: qsTr("Dodaj novi kontakt")
+                    enabled: newContactField.length > 0
+                    onClicked: {
+                        Client.checkNewContact(newContactField.text)
+                        newContactField.clear()
+                    }
+                }
+
+                Label{
+                    id: msgLabel
+                    font.pixelSize: 14
+                    color: "red"
+                }
+
+                Connections {
+                    target: Client
+                    onBadContact: {
+                        msgLabel.text = msg
+                    }
+                }
+
+                Keys.onReturnPressed: {
                     Client.checkNewContact(newContactField.text)
                     newContactField.clear()
                 }
             }
+            RowLayout{
+                Button {
+                    id: createGroupButton
+                    text: qsTr("Napravi novu grupu")
+                    onClicked: groupPopup.open()
 
-            Label{
-                id: msgLabel
-                font.pixelSize: 14
-                color: "red"
-            }
-
-            Connections {
-                target: Client
-                onBadContact: {
-                    msgLabel.text = msg
                 }
-            }
 
-            Keys.onReturnPressed: {
-                Client.checkNewContact(newContactField.text)
-                newContactField.clear()
             }
         }
 
@@ -101,4 +113,64 @@ Page {
             }
         }
     }
+    Popup{
+        id: groupPopup
+        x: 100
+        y: 100
+        width: 400
+        height: 500
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+        onClosed: Client.clearGroupSet()
+        ListView{
+            width: parent.width
+            layoutDirection: Qt.RightToLeft
+            cacheBuffer: 316
+            id: listViewGroup
+            anchors.fill: parent
+            topMargin: 48
+            leftMargin: 48
+            bottomMargin: 48
+            rightMargin: 48
+            spacing: 20
+            model: contactModel
+            header: RowLayout {
+                TextField {
+                    id: groupNameField
+                    placeholderText: qsTr("Naziv grupe")
+                    selectByMouse: true
+            }
+                Button {
+                    id: confirmGroupButton
+                    text: qsTr("Napravi grupu")
+                    enabled: groupNameField.length > 0
+                    onClicked: {
+                        Client.sendGroupInfos(groupNameField.text)
+                        groupNameField.clear()
+                        groupPopup.close()
+                    }
+                }
+            }
+            delegate: ItemDelegate {
+                CheckBox {
+                    id: a
+                    checked: false
+                    text: model.con
+                    width: listView.width - listView.leftMargin - listView.rightMargin
+                    onClicked: {
+                    }
+                    onCheckedChanged: {
+                        if(a.checked){
+                            Client.addContactToGroupSet(a.text)
+                        }
+                        else
+                            Client.removeContactFromGroupSet(a.text)
+                    }
+                }
+            }
+        }
+    }
 }
+
+

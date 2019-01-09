@@ -9,6 +9,7 @@
 #include <tuple>
 #include <ctime>
 #include <chrono>
+#include <QSet>
 class Client : public QSslSocket
 
 {
@@ -31,6 +32,10 @@ public:
     Q_INVOKABLE void sendPicture(const QString& filePath);
     Q_INVOKABLE void disconnectFromServer();
     Q_INVOKABLE QString username();
+    Q_INVOKABLE void addContactToGroupSet(QString contact);
+    Q_INVOKABLE void removeContactFromGroupSet(QString contact);
+    Q_INVOKABLE void sendGroupInfos(QString groupName);
+    Q_INVOKABLE void clearGroupSet();
     void createXml() const;
 
 signals:
@@ -60,6 +65,7 @@ private:
     QHash<QString, int> m_msgIndexBegin;
     QHash<QString, bool> m_contactInfos;
     unsigned long m_msgCounter = 0;
+    QSet<QString> contactsInGropus;
 
 };
 
