@@ -153,17 +153,13 @@ void Client::readMsg(){
     else if (msgType == MessageType::Image){
         // ovako je samo dok ne proradi
         // TODO: popravi kada proradi
-		//qDebug() << "stiglo je" << jsonMsgObj["counter"].toString();
 
-		qDebug() << "image from " << jsonMsgObj["from"];
-        mapOfImages[jsonMsgObj["id"].toString()].append(jsonMsgObj["msg"].toString().toLatin1());
-        if(jsonMsgObj["counter"].toString() == "end") {
-            QPixmap p;
-            p.loadFromData(QByteArray::fromBase64(mapOfImages[jsonMsgObj["id"].toString()]));
-            QImage image = p.toImage();
-            QImageWriter writer(jsonMsgObj["id"].toString() + ".png", "png");
-            writer.write(image);
-        }
+        QPixmap p;
+        p.loadFromData(QByteArray::fromBase64(jsonMsgObj["msg"].toString().toLatin1()));
+        QImage image = p.toImage();
+        QImageWriter writer(jsonMsgObj["id"].toString() + ".png", "png");
+        writer.write(image);
+        showPicture("file://" + QFileInfo(jsonMsgObj["id"].toString() + ".png").absoluteFilePath());
     }
     else {
         qDebug() << "UNKNOWN MESSAGE TYPE";
@@ -228,7 +224,6 @@ void Client::createXml() {
 }
 
 // pisemo istoriju ceta u xml fajl
-// ok
 void Client::writeInXml() {
     QString filePath = username + ".xml";
 
@@ -326,7 +321,7 @@ void Client::sendPicture(QString filePath, QString to) {
     QBuffer buffer;
     buffer.open(QIODevice::WriteOnly);
     // TODO sta ako nije png
-	//TODO ovde naci ekstenziju slike(lastIndexOf("."))
+    // TODO ovde naci ekstenziju slike(lastIndexOf("."))
     pix.save(&buffer, "png");
     auto const data = buffer.data().toBase64();
 
@@ -362,7 +357,7 @@ void Client::sendMsgData(QString to, QString msg) {
 		QByteArray byteArray;
 		QDataStream stream(&byteArray, QIODevice::WriteOnly);
 		stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
-		stream << msgLength;
+        stream << msgLength;
 		write(byteArray);
         sendMsg(fullMsgString);
     }
@@ -390,3 +385,4 @@ void Client::sendAuthData(QString password){
         //qDebug() << strJson << strJson.length() << fullAuthString;
     }
 }
+

@@ -8,6 +8,8 @@
 #include <tuple>
 #include <ctime>
 #include <chrono>
+#include <QPixmap>
+
 class Client : public QTcpSocket
 {
     Q_OBJECT
@@ -31,6 +33,7 @@ public:
 
 
 signals:
+    void showPicture(QString picturePath);
     void showMsg(QString msgFrom, QString msg);
     void showContacts(QString contact, bool online);
     void clearContacts();
@@ -49,7 +52,6 @@ public:
     std::map<QString, std::vector<std::tuple<QString, QString, QString>>> msgDataBuffer;
     std::map<QString, unsigned long> msgInfos;
     std::map<QString, bool> contactInfos;
-    std::map<QString, QByteArray> mapOfImages;
     unsigned long counter = 0;
     int imageNum = 0;
 	int m_bytesToRead = 0;

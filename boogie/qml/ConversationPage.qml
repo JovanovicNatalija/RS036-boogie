@@ -1,4 +1,4 @@
-﻿import QtQuick 2.10
+import QtQuick 2.10
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Layouts 1.3
@@ -53,7 +53,10 @@ Page {
         folder: shortcuts.home
         nameFilters: ["Images files (*.jpg, *png)"]
         onAccepted: {
-            Client.sendPicture(fileDialog.fileUrl, inConversationWith)
+            var msg = fileDialog.fileUrl.toString()
+            console.log(msg)
+            Client.sendPicture(msg, inConversationWith)
+            messageModel.append({image: true, message: msg, index: 1})
         }
     }
 
@@ -65,10 +68,15 @@ Page {
         target: Client
         onShowMsg: {
             if(inConversationWith === msgFrom) {
-                messageModel.append({message: msg, index : 0})
+                messageModel.append({message: msg, index : 0, image: false})
             } else if(Client.getUsername() === msgFrom) {
-                messageModel.append({message: msg, index : 1})
+                messageModel.append({message: msg, index : 1, image: false})
             }
+        }
+
+        onShowPicture: {
+            console.log(picturePath)
+            messageModel.append({image: true, message: picturePath, index: 0})
         }
     }
 
@@ -77,39 +85,58 @@ Page {
     ColumnLayout {
         anchors.fill: parent
 
-
         ListView {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.margins: pane.leftPadding
-            spacing: 12
+            spacing: 20
 
             model: messageModel
 
-            delegate: Rectangle {
-				width: lblMsg.width + 2*lblMsg.anchors.margins
-				height: lblMsg.height + 2*lblMsg.anchors.margins
-                radius: 10
-                color: index ? "#4F7942" : "#808080"
+            delegate: Loader {
                 anchors.right: {
-                    if(index) parent.right
+                if(index) parent.right
                 }
 
-                Label {
-                    id: lblMsg
-                    text: model.message
-					//used to get text width in pixels
-					TextMetrics {
-						id: textMetrics
-						font: lblMsg.font
-						text: lblMsg.text
-					}
-					width: textMetrics.boundingRect.width < 500
-							? textMetrics.boundingRect.width : 500
-                    color: "black"
-					wrapMode: width == 500 ? Text.WordWrap : Text.NoWrap
-                    anchors.centerIn: parent
-                    anchors.margins: 10
+                sourceComponent: image ? imageMsg : textMsg
+
+                Component {
+                    id: textMsg
+                    Rectangle {
+                        width: lblMsg.width + 2*lblMsg.anchors.margins
+                        height: lblMsg.height + 2*lblMsg.anchors.margins
+                        radius: 10
+                        color: index ? "#4F7942" : "#808080"
+
+                        Label {
+                            id: lblMsg
+                            text: model.message
+                            //used to get text width in pixels
+                            TextMetrics {
+                            id: textMetrics
+                            font: lblMsg.font
+                            text: lblMsg.text
+                            }
+                            width: textMetrics.boundingRect.width < 500
+                            ? textMetrics.boundingRect.width : 500
+                            color: "black"
+                            wrapMode: width == 500 ? Text.WordWrap : Text.NoWrap
+                            anchors.centerIn: parent
+                            anchors.margins: 10
+                        }
+                    }
+                }
+
+
+
+                Component {
+                    id: imageMsg
+                    Image {
+                        width: sourceSize.width * 0.3
+                        height: sourceSize.height * 0.3
+                        source: model.message
+                        fillMode: Image.PreserveAspectFit
+                    }
                 }
 
             }
@@ -139,7 +166,7 @@ Page {
                         if(event.key === Qt.Key_Return ){
                             Client.sendMsgData(inConversationWith, messageField.text.trim())
 							Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text.trim())
-							messageModel.append({message: messageField.text.trim(), index : 1});
+                            messageModel.append({message: messageField.text.trim(), index : 1, image: false});
                             messageField.clear()
 							//so that textArea wouldnt read return key too
 							event.accepted = true
@@ -155,7 +182,7 @@ Page {
                     onClicked: {
                         Client.sendMsgData(inConversationWith, messageField.text)
 						Client.addMsgToBuffer(Client.getUsername(), inConversationWith, messageField.text)
-						messageModel.append({message: messageField.text, index : 1});
+                        messageModel.append({message: messageField.text, index : 1, image: false});
                         messageField.clear()
                     }
                 }
