@@ -3,12 +3,13 @@
 
 #include <QString>
 #include <QJsonObject>
+#include <QSet>
 
 typedef struct{
     QString groupName;
-    QSet members;
+    QSet<QString> members;
     int id;
-    QSet admins;
+    QSet<QString> admins;
 } chatGroup;
 
 QString packMessage(const QJsonObject& dataToSend);
