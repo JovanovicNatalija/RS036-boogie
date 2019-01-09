@@ -295,12 +295,12 @@ void Server::authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSo
 	if(m_usernameToSocket.contains(jsonResponseObject["username"].toString())){
 		qDebug() << "ALLREADY LOGGED IN";
 		sendServerMessageTo(senderSocket,MessageType::AllreadyLoggedIn);
-		senderSocket->disconnectFromHost();
+        //senderSocket->disconnectFromHost();
 	}
 	else if(checkPassword(jsonResponseObject) == false){
 		qDebug() << "BAD PASS";
-		sendServerMessageTo(senderSocket,MessageType::BadPass);
-        senderSocket->disconnectFromHost();
+        sendServerMessageTo(senderSocket,MessageType::BadPass);
+        //senderSocket->disconnectFromHost();
 	}
 	else{
 		//helper var, just for nicer code;
@@ -341,12 +341,6 @@ void Server::forwardMessage(const QString& to, const QJsonObject& message)
 bool Server::isOnline(const QString& username) const
 {
 	return m_usernameToSocket.contains(username);
-}
-
-//user exists if it exists in m_authData
-bool Server::userExists(const QString& username) const
-{
-	return m_authData.contains(username);
 }
 
 void Server::readMessage(){
@@ -398,11 +392,6 @@ void Server::readMessage(){
 	else if(msgType == MessageType::Text){
 		QString tmpTo = jsonResponseObject["to"].toString();
 		QString tmpFrom = jsonResponseObject["from"].toString();
-		if(!userExists(tmpTo))
-		{
-			sendServerMessageTo(senderSocket,MessageType::UnknownUser,tmpFrom);
-			return;
-		}
 		if(isOnline(tmpTo)){
 			forwardMessage(tmpTo, jsonResponseObject);
 		}
