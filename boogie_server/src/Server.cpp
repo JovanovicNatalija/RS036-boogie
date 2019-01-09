@@ -54,14 +54,13 @@ void Server::incomingConnection(qintptr socketDescriptor)
 {
 	QSslSocket *newConnection = new QSslSocket(this);
 
-	QSslError error(QSslError::SelfSignedCertificate);
-	QList<QSslError> expectedSslErrors;
-	expectedSslErrors.append(error);
+	//this has to be in qt4 syntax
+	connect(newConnection, SIGNAL(sslErrors(QList<QSslError>)),
+			this, SLOT(sslErrors(QList<QSslError>)));
 
-	newConnection->ignoreSslErrors(expectedSslErrors);
-
-	connect(newConnection, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(sslErrors(QList<QSslError>)));
 	newConnection->setSocketDescriptor(socketDescriptor);
+
+	//encryption keys and certificates
 	newConnection->setPrivateKey(key);
 	newConnection->setLocalCertificate(cert);
 	newConnection->addCaCertificates("../certs/blue_ca.pem");
@@ -73,12 +72,13 @@ void Server::incomingConnection(qintptr socketDescriptor)
 
 void Server::sslErrors(const QList<QSslError> &errors)
 {
-	std::cerr << "tu sam" << std::endl;
+	QSslSocket *senderSocket = qobject_cast<QSslSocket *>(QObject::sender());
 	foreach (const QSslError &error, errors){
-		std::cerr << error.errorString().toStdString() << std::endl;
-//		if(error== QSslError::SelfSignedCertificate){
-//			ignoreSslErrors(error);
-//		}
+		if(error.error() == QSslError::SelfSignedCertificate){//ignoring self signed cert
+			QList<QSslError> expectedSslErrors;
+			expectedSslErrors.append(error);
+			senderSocket->ignoreSslErrors(expectedSslErrors);
+		}
 	}
 
 }
@@ -233,8 +233,6 @@ QDomElement Server::createNewXmlElement(const QString& tagName,
 void Server::addNewContact(const QString& user, const QString& contact)
 {
 	m_contacts[user].append(contact);
-
-	//first user in xml
 
 	QDomNode userDomElement;
 	int i = 0;

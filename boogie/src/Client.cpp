@@ -19,16 +19,7 @@ Client::Client(QObject* parrent)
 	:QSslSocket(parrent)
 {
 
-	QList<QSslCertificate> cert = QSslCertificate::fromPath(QLatin1String("../certs/red_local.pem"));
-	QSslError error(QSslError::SelfSignedCertificate, cert.at(0));
-	QList<QSslError> expectedSslErrors;
-	expectedSslErrors.append(error);
-
-
-	ignoreSslErrors(expectedSslErrors);
-	//socket.connectToHostEncrypted("server.tld", 443);
-
-	//addCaCertificates("../certs/red_ca.pem");
+	//setting ssl certificates
 	setLocalCertificate("../certs/blue_local.pem");
 	setPrivateKey("../certs/blue_local.key");
 	setPeerVerifyMode(QSslSocket::VerifyPeer);
@@ -44,9 +35,13 @@ QString Client::getUsername() {
 
 void Client::sslErrors(const QList<QSslError> &errors)
 {
-	std::cerr << "tu sam" << std::endl;
-	foreach (const QSslError &error, errors)
-		std::cerr << error.errorString().toStdString() << std::endl;
+	foreach (const QSslError &error, errors){
+		if(error.error() == QSslError::SelfSignedCertificate){//ignoring self signed cert
+			QList<QSslError> expectedSslErrors;
+			expectedSslErrors.append(error);
+			ignoreSslErrors(expectedSslErrors);
+		}
+	}
 }
 
 
@@ -64,7 +59,6 @@ void Client::connectToServer(QString username, QString ip, quint16 port) {
 
     this->username = username;
 
-	//std::cout << "Connected to host" << std::endl;
 }
 
 void Client::disconnectFromServer() {
@@ -222,7 +216,7 @@ void Client::createXml() {
 }
 
 // pisemo istoriju ceta u xml fajl
-// ok
+
 void Client::writeInXml() {
     QString filePath = username + ".xml";
 
