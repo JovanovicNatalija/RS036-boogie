@@ -308,15 +308,15 @@ void Client::removeContactFromGroupSet(QString contact) {
 void Client::sendGroupInfos(QString groupName) {
     contactsInGropus.insert(m_username);
     QJsonObject groupDataJson;
-    QJsonArray contactsArrayJson;
+    QJsonArray membersArrayJson;
     std::copy(contactsInGropus.begin(),
                    contactsInGropus.end(),
-                   std::back_insert_iterator<QJsonArray>(contactsArrayJson));
+                   std::back_insert_iterator<QJsonArray>(membersArrayJson));
     groupDataJson.insert("type", setMessageType(MessageType::CreateGroup));
-    groupDataJson.insert("contacts", contactsArrayJson);
+    groupDataJson.insert("contacts", membersArrayJson);
     groupDataJson.insert("groupName", groupName);
-    if(!jsonMessageObject.empty()) {
-        QString fullMsgString = packMessage(jsonMessageObject);
+    if(!groupDataJson.empty()) {
+        QString fullMsgString = packMessage(groupDataJson);
         sendMsg(fullMsgString);
     }
     emit clearContacts();
