@@ -1,4 +1,4 @@
-﻿import QtQuick 2.10
+import QtQuick 2.10
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Layouts 1.3
@@ -14,21 +14,11 @@ Page {
     property string inConversationWith
     property int index : 0
 
-    header: ToolBar {
-        ToolButton {
-            property bool shown: false
-            text: qsTr("Prikazi prethodne poruke")
-            anchors.right: parent.right
-            anchors.rightMargin: 10
-            anchors.verticalCenter: parent.verticalCenter
-            enabled: !shown
-            onClicked: {
-                shown = true
-                messageModel.clear()
-                Client.displayOnConvPage(inConversationWith)
-            }
-        }
+    Component.onCompleted: {
+        Client.displayOnConvPage(inConversationWith)
+    }
 
+    header: ToolBar {
         ToolButton {
             text: qsTr("Nazad")
             anchors.left: parent.left
@@ -52,8 +42,13 @@ Page {
         visible: false
         title: "Izaberi sliku"
         folder: shortcuts.home
+        nameFilters: ["Images files (*.jpg, *png)"]
         onAccepted: {
-            Client.sendPicture(fileDialog.fileUrls)
+            var path = fileDialog.fileUrl.toString()
+            console.log(path)
+            Client.sendPicture(inConversationWith, path)
+            Client.addMsgToBuffer(Client.username(), inConversationWith, path, "image")
+            messageModel.append({image: true,message: path, index: 1})
         }
     }
 
@@ -64,54 +59,77 @@ Page {
     Connections {
         target: Client
         onShowMsg: {
+            console.log(msg)
             if(inConversationWith === msgFrom) {
-                messageModel.append({message: msg, index : 0})
+                messageModel.append({message: msg, index : 0, image: false})
             } else if(Client.username() === msgFrom) {
-                messageModel.append({message: msg, index : 1})
-            } else {
-
+                messageModel.append({message: msg, index : 1, image: false})
             }
         }
 
+        onShowPicture: {
+            console.log(path)
+            if(inConversationWith === msgFrom) {
+                messageModel.append({message: path, index : 0, image: true})
+            } else if(Client.username() === msgFrom) {
+                messageModel.append({message: path, index : 1, image: true})
+            }
+        }
     }
 
     ColumnLayout {
         anchors.fill: parent
 
-
         ListView {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.margins: pane.leftPadding
-            spacing: 12
+            spacing: 20
 
             model: messageModel
 
-            delegate: Rectangle {
-				width: lblMsg.width + 2*lblMsg.anchors.margins
-				height: lblMsg.height + 2*lblMsg.anchors.margins
-                radius: 10
-                color: index ? "#4F7942" : "#808080"
+            delegate: Loader {
                 anchors.right: {
-                    if(index) parent.right
+                if(index) parent.right
                 }
 
-				Label {
-                    id: lblMsg
-                    text: model.message
-					//used to get text width in pixels
-					TextMetrics {
-						id: textMetrics
-						font: lblMsg.font
-						text: lblMsg.text
-					}
-					width: textMetrics.boundingRect.width < 500
-							? textMetrics.boundingRect.width : 500
-                    color: "black"
-					wrapMode: width == 500 ? Text.WordWrap : Text.NoWrap
-                    anchors.centerIn: parent
-                    anchors.margins: 10
+                sourceComponent: image ? imageMsg : textMsg
 
+                Component {
+                    id: textMsg
+                    Rectangle {
+                        width: lblMsg.width + 2*lblMsg.anchors.margins
+                        height: lblMsg.height + 2*lblMsg.anchors.margins
+                        radius: 10
+                        color: index ? "#4F7942" : "#808080"
+
+                        Label {
+                            id: lblMsg
+                            text: model.message
+                            //used to get text width in pixels
+                            TextMetrics {
+                            id: textMetrics
+                            font: lblMsg.font
+                            text: lblMsg.text
+                            }
+                            width: textMetrics.boundingRect.width < 500
+                            ? textMetrics.boundingRect.width : 500
+                            color: "black"
+                            wrapMode: width == 500 ? Text.WordWrap : Text.NoWrap
+                            anchors.centerIn: parent
+                            anchors.margins: 10
+                        }
+                    }
+                }
+
+                Component {
+                    id: imageMsg
+                    Image {
+                        width: sourceSize.width * 0.3
+                        height: sourceSize.height * 0.3
+                        source: model.message
+                        fillMode: Image.PreserveAspectFit
+                    }
                 }
 
             }
@@ -140,8 +158,8 @@ Page {
                     Keys.onReturnPressed: {
                         if(messageField.text.trim() !== "") {
                             Client.sendMsgData(inConversationWith, messageField.text.trim())
-                            Client.addMsgToBuffer(Client.username(), inConversationWith, messageField.text.trim())
-                            messageModel.append({message: messageField.text.trim(), index : 1})
+                            Client.addMsgToBuffer(Client.username(), inConversationWith, messageField.text.trim(), "text")
+                            messageModel.append({message: messageField.text.trim(), index : 1, image : false})
                         }
                         messageField.clear()
                     }
@@ -155,8 +173,8 @@ Page {
                     onClicked: {
                         if(messageField.text.trim() !== "") {
                             Client.sendMsgData(inConversationWith, messageField.text.trim())
-                            Client.addMsgToBuffer(Client.username(), inConversationWith, Client.splitMessage(messageField.text.trim()))
-                            messageModel.append({message: Client.splitMessage(messageField.text.trim()), index : 1});
+                            Client.addMsgToBuffer(Client.username(), inConversationWith, messageField.text.trim(), "text")
+                            messageModel.append({message: messageField.text.trim(), index : 1, image : false});
                         }
                         messageField.clear()
                     }

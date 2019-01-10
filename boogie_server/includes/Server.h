@@ -23,7 +23,7 @@ public:
 	Server(quint16 port);
 	bool isInitialized() const;
 	void showError() const;
-	~Server();
+    ~Server() override;
 
 
 
@@ -45,6 +45,7 @@ private:
 	QHash<QString, QString> m_authData;
 	QHash<QString, QVector<QString>> m_contacts;
 	QHash<QString, QTcpSocket*> m_usernameToSocket;
+	QHash<QTcpSocket*, int> m_socketBytesLeft;
 	QHash<QString, QVector<QJsonObject>> m_unreadMessages;
 
 	bool m_isInitialized;
