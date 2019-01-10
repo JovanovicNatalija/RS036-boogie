@@ -146,7 +146,7 @@ void Client::readMsg(){
 			addNewContact(jsonMsgObj["username"].toString(),
 							jsonMsgObj["online"].toBool());
         else {
-            emit badContact(QString("Trazeni kontakt ne postoji!"));
+			emit badContact(QString("Traženi kontakt ne postoji!"));
         }
     }
     else if (msgType == MessageType::Image){
@@ -174,7 +174,7 @@ void Client::readMsg(){
         emit alreadyLogIn();
     }
     else if(msgType == MessageType::BadMessageFormat){
-        qDebug() << "Ne znas da programiras :p";
+		qDebug() << "Ne znaš da programiraš :p";
     }
     else{
         qDebug() << "UNKNOWN MESSAGE TYPE";
@@ -334,7 +334,9 @@ void Client::readFromXml() {
 //saljemo serveru username novog kontakta, da bi proverili da li taj kontakt postoji
 void Client::checkNewContact(const QString& name) {
     if(name == m_username) {
-        badContact(QString("Ne mozete pricati sami sa sobim,\n nije socijalno prihvatljivo"));
+		badContact(QString("Ne možete pričati sami sa sobom,"
+						   "\n nije socijalno prihvatljivo :)"));
+		return;
     }
     QJsonObject jsonObject;
     jsonObject.insert("type", setMessageType(MessageType::AddNewContact));

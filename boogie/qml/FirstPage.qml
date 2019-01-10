@@ -39,7 +39,7 @@ Page {
                             usernameField.clear()
                             passwordField.clear()
                             root.StackView.view.pop();
-                            msgLabel.text = "Losa sifra!"
+							msgLabel.text = "Loša šifra!"
                         }
 
                         onAlreadyLogIn: {
@@ -47,7 +47,7 @@ Page {
                             usernameField.clear()
                             passwordField.clear()
                             root.StackView.view.pop();
-                            msgLabel.text = "Vec ste ulogovani na drugom racunaru!"
+							msgLabel.text = "Već ste ulogovani na drugom računaru!"
                         }
                     }
 
@@ -58,25 +58,25 @@ Page {
 					}
 					TextField {
 						id: ipField
-						placeholderText: qsTr("127.0.0.1")
+						placeholderText: qsTr("localhost")
 						selectByMouse: true
 					}
 
 					Label{
 						id: usernameLabel
-                        text: qsTr("Korisnicko ime:")
+						text: qsTr("Korisničko ime:")
 						font.pixelSize: 14
 					}
 					TextField {
 						id: usernameField
 						anchors.topMargin: 20
-                        placeholderText: qsTr("Korisnicko ime")
+						placeholderText: qsTr("Korisničko ime")
 						selectByMouse: true
 					}
 
 					Label{
 						id: passwordLabel
-                        text: qsTr("Sifra:")
+						text: qsTr("Šifra:")
 						font.pixelSize: 14
 					}
 					TextField {

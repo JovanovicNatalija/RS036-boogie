@@ -168,7 +168,7 @@ Page {
 
                 Button {
                     id: confirmButton
-                    text: qsTr("Posalji")
+					text: qsTr("Pošalji")
                     enabled: messageField.length > 0
                     onClicked: {
                         if(messageField.text.trim() !== "") {

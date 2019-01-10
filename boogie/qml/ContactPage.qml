@@ -52,7 +52,7 @@ Page {
             }
             TextField {
                 id: newContactField
-                placeholderText: qsTr("Korisnicko ime")
+				placeholderText: qsTr("Korisničko ime")
                 selectByMouse: true
             }
             Button {
