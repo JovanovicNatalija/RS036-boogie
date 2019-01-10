@@ -1,5 +1,5 @@
 QT += quick network xml core widgets quickcontrols2
-CONFIG += c++11
+CONFIG += c++14
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -14,12 +14,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 HEADERS += \
     includes/Client.h \
-    ../util/util.h
+    ../util/util.h \
 
 SOURCES += \
     src/main.cpp \
     src/Client.cpp \
-    ../util/util.cpp
+    ../util/util.cpp \
 
 RESOURCES += qml.qrc \
 

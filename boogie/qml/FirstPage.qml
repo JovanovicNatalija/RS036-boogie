@@ -4,8 +4,6 @@ import QtQuick.Layouts 1.3
 import QtQuick.Controls.Material 2.1
 import QtQuick.Controls 2.4
 import QtQuick.Window 2.2
-import QtQuick.Layouts 1.3
-import QtQuick.Controls 2.1
 
 Page {
     id: root
@@ -34,6 +32,25 @@ Page {
                     id: glMainLayout
                     columns: 2
 
+                    Connections {
+                        target: Client
+                        onBadPass: {
+                            ipField.clear()
+                            usernameField.clear()
+                            passwordField.clear()
+                            root.StackView.view.pop();
+							msgLabel.text = "Loša šifra!"
+                        }
+
+                        onAlreadyLogIn: {
+                            ipField.clear()
+                            usernameField.clear()
+                            passwordField.clear()
+                            root.StackView.view.pop();
+							msgLabel.text = "Već ste ulogovani na drugom računaru!"
+                        }
+                    }
+
 					Label{
 						id: ipLabel
                         text: qsTr("Adresa servera:")
@@ -41,25 +58,25 @@ Page {
 					}
 					TextField {
 						id: ipField
-						placeholderText: qsTr("127.0.0.1")
+						placeholderText: qsTr("localhost")
 						selectByMouse: true
 					}
 
 					Label{
 						id: usernameLabel
-                        text: qsTr("Korisnicko ime:")
+						text: qsTr("Korisničko ime:")
 						font.pixelSize: 14
 					}
 					TextField {
 						id: usernameField
 						anchors.topMargin: 20
-                        placeholderText: qsTr("Korisnicko ime")
+						placeholderText: qsTr("Korisničko ime")
 						selectByMouse: true
 					}
 
 					Label{
 						id: passwordLabel
-                        text: qsTr("Sifra:")
+						text: qsTr("Šifra:")
 						font.pixelSize: 14
 					}
 					TextField {
@@ -68,16 +85,24 @@ Page {
 						placeholderText: qsTr("*********")
 						selectByMouse: true
 					}
+
 				}
-                Keys.onPressed: {
-                    if(event.key === Qt.Key_Return ){
-                        root.StackView.view.push(
-                                    "qrc:/qml/ContactPage.qml",
-                                    { username: usernameField.text })
+
+                Label{
+                    id: msgLabel
+                    font.pixelSize: 14
+                    color: "red"
+                }
+
+                Keys.onReturnPressed: {
+                    root.StackView.view.push(
+                        "qrc:/qml/ContactPage.qml",
+                        { username: usernameField.text })
+                    if(msgLabel.text === "") {
                         Client.connectToServer(usernameField.text, ipField.text)
-                        Client.sendAuthData(passwordField.text)
-                        Client.readFromXml()
                     }
+                    Client.sendAuthData(passwordField.text)
+                    Client.readFromXml()
                 }
 
 				Button {
@@ -91,15 +116,17 @@ Page {
 						root.StackView.view.push(
 									"qrc:/qml/ContactPage.qml",
 									{ username: usernameField.text })
-                        Client.connectToServer(usernameField.text, ipField.text)
+                        if(msgLabel.text === "") {
+                            Client.connectToServer(usernameField.text, ipField.text)
+                        }
                         Client.sendAuthData(passwordField.text)
                         Client.readFromXml()
-
                     }
-
                 }
-
             }
         }
+
     }
+
+
 }

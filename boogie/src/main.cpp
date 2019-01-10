@@ -15,12 +15,15 @@ int main(int argc, char *argv[])
 
     Client c;
 
+    QCoreApplication::setOrganizationName("Boogie");
+    QCoreApplication::setOrganizationDomain("Boogie.com");
+
+    QQmlContext* context = engine.rootContext();
+    context->setContextProperty("Client", &c);
+
     engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
     if (engine.rootObjects().isEmpty())
         return -1;
-
-    QQmlContext* context = engine.rootContext();
-	context->setContextProperty("Client", &c);
 
     return app.exec();
 }

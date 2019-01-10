@@ -14,6 +14,11 @@ ApplicationWindow {
     Material.primary: Material.LightGreen
     Material.foreground: Material.LightGreen
 
+    onClosing: {
+        Client.writeInXml()
+        Client.disconnectFromServer()
+    }
+
     StackView {
         id: stackView
         anchors.fill: parent
