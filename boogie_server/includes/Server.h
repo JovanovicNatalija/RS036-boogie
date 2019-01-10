@@ -80,6 +80,7 @@ private:
 	void createUser(const QString& pass, const QString& username);
 	void sendUnreadMessages(const QString& username, QTcpSocket* socket);
 	void authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSocket);
+	void createGroup(const QJsonObject &jsonResponseObject);
 
 	/*HELPER FUNCTIONS*/
 	bool userExists(const QString& username) const;
@@ -87,6 +88,7 @@ private:
 	void checkContactExistence(const QString& tmpFrom, const QString& tmpTo);
 	bool checkPassword(const QJsonObject&);
 	bool hasUnreadMessages(const QString& username) const;
+
 
 };
 
