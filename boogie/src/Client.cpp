@@ -14,12 +14,14 @@
 #include "../util/util.h"
 #include <map>
 #include <QCryptographicHash>
+#include <QSet>
 #include <QImageReader>
 #include <QPixmap>
 #include <QBuffer>
 #include <QUrl>
 #include <iostream>
 #include <QImageWriter>
+
 
 Client::Client(QObject* parrent)
     :QSslSocket(parrent)
@@ -78,9 +80,16 @@ void Client::addNewContact(const QString& name, bool online) {
 
     if(m_contactInfos[name] != true)
         m_contactInfos[name] = online;
+    refreshContactsAndGroups();
+}
+
+void Client::refreshContactsAndGroups() {
     emit clearContacts();
     for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
-        emit showContacts(i.key(), i.value());
+        emit showContacts(i.key(), i.value(), -1);
+    }
+    for(auto group : m_groupInfos) {
+        emit showGroups(group.groupName, true, group.id);
     }
 }
 
@@ -102,51 +111,56 @@ void Client::readMsg(){
 
     if(jsonMsgObj.contains("to") && jsonMsgObj["to"].toString() != m_username) {
         qDebug() << "Received msg is not for " << m_username;
-        return;
-    }
-    if(msgType == MessageType::Text){
-        QString message = jsonMsgObj["msg"].toString();
+		return;
+	}
+	if(msgType == MessageType::Text){
+        if(jsonMsgObj.contains("groupId")){
+            int groupId = jsonMsgObj["groupId"].toInt();
+            QString message = jsonMsgObj["msg"].toString();
+            emit showMsgForGroup(groupId, jsonMsgObj["from"].toString(), message);
 
-        addMsgToBuffer(jsonMsgObj["from"].toString(),
-                        jsonMsgObj["from"].toString(),
-                        message,
-                        QString("text"));
 
-        emit showMsg(jsonMsgObj["from"].toString(),
-                    message);
+        } else {
+            QString message = jsonMsgObj["msg"].toString();
+            addMsgToBuffer(jsonMsgObj["from"].toString(),
+                            jsonMsgObj["from"].toString(),
+							message,QString("text"));
+
+            emit showMsg(jsonMsgObj["from"].toString(),
+                        message);
+        }
     }
     else if(msgType == MessageType::Contacts){
         QJsonArray contactsJsonArray = jsonMsgObj["contacts"].toArray();
         for(auto con : contactsJsonArray){
             QJsonObject jsonObj = con.toObject();
             m_contactInfos[jsonObj["contact"].toString()] = jsonObj["online"].toBool();
-            //emit showContacts(jsonObj["contact"].toString(), jsonObj["online"].toBool());
-        }
-
-        for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
-            emit showContacts(i.key(), i.value());
-        }
-    }
-    else if(msgType == MessageType::ContactLogin){
+		}
+        refreshContactsAndGroups();
+	}
+	else if(msgType == MessageType::ContactLogin){
         m_contactInfos[jsonMsgObj["contact"].toString()] = true;
-        emit clearContacts();
-        for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
-            emit showContacts(i.key(), i.value());
-        }
-    }
-    else if(msgType == MessageType::ContactLogout){
+        refreshContactsAndGroups();
+	}
+	else if(msgType == MessageType::ContactLogout){
         m_contactInfos[jsonMsgObj["contact"].toString()] = false;
-        emit clearContacts();
-        for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
-            emit showContacts(i.key(), i.value());
-        }
-    }
-    else if(msgType == MessageType::AddNewContact) {
+        refreshContactsAndGroups();
+	}
+	else if(msgType == MessageType::AddNewContact) {
         if(jsonMsgObj["exists"].toBool() == true)
 			addNewContact(jsonMsgObj["username"].toString(),
 							jsonMsgObj["online"].toBool());
         else {
 			emit badContact(QString("Traženi kontakt ne postoji!"));
+        }
+    }
+    else if(msgType == MessageType::CreateGroup) {
+        addGroup(jsonMsgObj);
+    }
+    else if(msgType == MessageType::Groups) {
+        QJsonArray groupsArray = jsonMsgObj["groups"].toArray();
+        for(auto gr: groupsArray){
+            addGroup(gr.toObject());
         }
     }
     else if (msgType == MessageType::Image){
@@ -187,6 +201,20 @@ void Client::readMsg(){
     if(this->bytesAvailable() != 0){
         emit readyRead();
     }
+}
+
+void Client::addGroup(QJsonObject grInfos) {
+    QJsonArray membersJsonArray = grInfos["members"].toArray();
+    QSet<QString> groupMembers;
+    for(auto member: membersJsonArray){
+        groupMembers.insert(member.toVariant().toString());
+    }
+    chatGroup gr;
+    gr.groupName = grInfos["groupName"].toString();
+    gr.members = groupMembers;
+    gr.id = grInfos["groupId"].toInt();
+    m_groupInfos.push_back(gr);
+    refreshContactsAndGroups();
 }
 
 void Client::sendMsg(const QString& str) {
@@ -349,6 +377,39 @@ void Client::checkNewContact(const QString& name) {
     }
 }
 
+void Client::addContactToGroupSet(QString contact) {
+    if(!m_contactsInGroups.contains(contact)){
+        m_contactsInGroups.insert(contact);
+    }
+}
+
+void Client::removeContactFromGroupSet(QString contact) {
+    if(m_contactsInGroups.contains(contact)){
+        m_contactsInGroups.remove(contact);
+    }
+}
+
+void Client::sendGroupInfos(QString groupName) {
+    m_contactsInGroups.insert(m_username);
+    QJsonObject groupDataJson;
+    QJsonArray membersArrayJson;
+    std::copy(m_contactsInGroups.begin(),
+                   m_contactsInGroups.end(),
+                   std::back_insert_iterator<QJsonArray>(membersArrayJson));
+    groupDataJson.insert("type", setMessageType(MessageType::CreateGroup));
+	groupDataJson.insert("members", membersArrayJson);
+    groupDataJson.insert("groupName", groupName);
+    if(!groupDataJson.empty()) {
+        QString fullMsgString = packMessage(groupDataJson);
+        sendMsg(fullMsgString);
+    }
+    refreshContactsAndGroups();
+}
+
+void Client::clearGroupSet() {
+    m_contactsInGroups.clear();
+}
+
 void Client::sendPicture(const QString& to, const QString& filePath) {
     QImageReader reader(QUrl(filePath).toLocalFile());
     QImage img = reader.read();
@@ -371,6 +432,18 @@ void Client::sendPicture(const QString& to, const QString& filePath) {
     sendMsg(msgString);
     flush();
     m_imageNum++;
+}
+
+void Client::sendGroupMsgData(int groupId, const QString& msg) {
+    QJsonObject jsonMessageObject;
+    jsonMessageObject.insert("type", setMessageType(MessageType::Text));
+    jsonMessageObject.insert("from", m_username);
+    jsonMessageObject.insert("groupId", groupId);
+    jsonMessageObject.insert("msg", msg);
+    if(!jsonMessageObject.empty()) {
+        QString fullMsgString = packMessage(jsonMessageObject);
+        sendMsg(fullMsgString);
+    }
 }
 
 //saljemo poruku i podatke o njoj na server

@@ -85,51 +85,79 @@ void Server::sslErrors(const QList<QSslError> &errors)
 }
 
 void Server::loadData(){
-    QFile dataFile{DATA_FILE_PATH};
+	m_nextGroupId = 0;
+	QFile dataFile{DATA_FILE_PATH};
 
-    if(!dataFile.open(QIODevice::ReadWrite | QIODevice::Text)){
-        qDebug() << "OPENING FILE AT " + DATA_FILE_PATH + " FAILED";
-        m_errorMessage = "OPENING DATA FILE FAILED";
-        m_isInitialized = false;
-        return;
-    }
-    else{
-        //if file is empty, intialize it with empty xml tag so that setContent
-        //would'nt fail
-        if(dataFile.size() == 0){
-            dataFile.write("<xml></xml>");
-            dataFile.flush();
-            dataFile.close();
-            dataFile.open(QIODevice::ReadWrite | QIODevice::Text);
-        }
-        if(!m_dataDoc.setContent(&dataFile)){
-            qDebug() << "LOADING FILE AT " + DATA_FILE_PATH + " FAILED";
-            m_errorMessage = "LOADING DATA FILE FAILED";
-            m_isInitialized = false;
-            return;
-        }
-        dataFile.close();
-    }
-    QDomElement root = m_dataDoc.firstChildElement();
-    m_users = root.elementsByTagName("user");
+	if(!dataFile.open(QIODevice::ReadWrite | QIODevice::Text)){
+		qDebug() << "OPENING FILE AT " + DATA_FILE_PATH + " FAILED";
+		m_errorMessage = "OPENING DATA FILE FAILED";
+		m_isInitialized = false;
+		return;
+	}
+	else{
+		//if file is empty, intialize it with empty xml tag so that setContent
+		//would'nt fail
+		if(dataFile.size() == 0){
+			dataFile.write("<xml></xml>");
+			dataFile.flush();
+			dataFile.close();
+			dataFile.open(QIODevice::ReadWrite | QIODevice::Text);
+		}
+		if(!m_dataDoc.setContent(&dataFile)){
+			qDebug() << "LOADING FILE AT " + DATA_FILE_PATH + " FAILED";
+			m_errorMessage = "LOADING DATA FILE FAILED";
+			m_isInitialized = false;
+			return;
+		}
+		dataFile.close();
+	}
+	QDomElement root = m_dataDoc.firstChildElement();
+	m_users = root.elementsByTagName("user");
 
-    //for each user tag
-    for(int i = 0; i < m_users.count(); ++i){
-        auto currUserNode = m_users.at(i);
+	//for each user tag
+	for(int i = 0; i < m_users.count(); ++i){
+		auto currUserNode = m_users.at(i);
 
-        //store username and password
-        auto currUsername =
-                currUserNode.attributes().namedItem("username").nodeValue();
-        auto password = currUserNode.firstChildElement("password").text();
-        m_authData[currUsername] = password;
+		//store username and password
+		auto currUsername =
+				currUserNode.attributes().namedItem("username").nodeValue();
+		auto password = currUserNode.firstChildElement("password").text();
+		m_authData[currUsername] = password;
 
-        //get list of contacts
-        auto contacts = currUserNode.firstChildElement("contacts")
-                .elementsByTagName("contact");
-        for(int j = 0; j < contacts.count(); ++j){
-            m_contacts[currUsername].append(contacts.at(j).toElement().text());
-        }
-    }
+		//get list of contacts
+		auto contacts = currUserNode.firstChildElement("contacts")
+				.elementsByTagName("contact");
+		for(int j = 0; j < contacts.count(); ++j){
+			m_contacts[currUsername].append(contacts.at(j).toElement().text());
+		}
+	}
+	m_groupsNodeList = root.elementsByTagName("group");
+
+	for(int i = 0; i< m_groupsNodeList.count(); ++i){
+		auto currGroupNode = m_groupsNodeList.at(i);
+		auto currGroupName = currGroupNode.attributes().namedItem("groupName")
+													.nodeValue();
+		auto currGroupId = currGroupNode.firstChildElement("id").text().toInt();
+		//searching for biggest id among groups and taking +1 for next group id
+		if(currGroupId >= m_nextGroupId){
+			m_nextGroupId = currGroupId + 1;
+		}
+		auto membersList = currGroupNode.firstChildElement("members")
+										.elementsByTagName("member");
+
+		QSet<QString> members;
+		chatGroup gr;
+		gr.groupName = currGroupName;
+		gr.id = currGroupId;
+		for(int j = 0; j < membersList.count(); ++j){
+			auto member = membersList.at(j).toElement().text();
+			members.insert(member);
+			m_usernameToGroups[member].push_back(currGroupId);
+		}
+		gr.members = members;
+		members.clear();//clear it for next iteration
+		m_groups[currGroupId] = gr;
+	}
 }
 void Server::newConnection(){
     if(this->hasPendingConnections()){
@@ -144,16 +172,16 @@ void Server::newConnection(){
 
 void Server::notifyContacts(const QString& username, const MessageType& m) const
 {
-    for(auto user : m_contacts[username]){
+	for(auto user : m_contacts[username]){
 		QSslSocket* tmp = m_usernameToSocket[user];
-        if(tmp == nullptr)//contact not online
-            continue;
-        QJsonObject notification;
-        notification.insert("type", setMessageType(m));
-        notification.insert("to", user);
-        notification.insert("contact", username);
-        sendMessageTo(tmp, notification);
-    }
+		if(tmp == nullptr)//contact not online
+			continue;
+		QJsonObject notification;
+		notification.insert("type", setMessageType(m));
+		notification.insert("to", user);
+		notification.insert("contact", username);
+		sendMessageToSocket(tmp, notification);
+	}
 }
 
 
@@ -173,7 +201,8 @@ void Server::userDisconnected(){
     disconnectedClient->deleteLater();
 }
 
-bool Server::sendMessageTo(QSslSocket *recepient, const QJsonObject& message) const
+
+bool Server::sendMessageToSocket(QSslSocket* recepient, const QJsonObject& message) const
 {
     QString tmp = packMessage(message);
 	int msgLength = tmp.size();
@@ -260,32 +289,57 @@ bool isNumeric(QByteArray arr){
                        [](char c){return isdigit(c);});
 }
 
-void Server::sendContactsFor(QString username, QSslSocket* senderSocket) const
+void Server::sendContactsFor(QString username, QSslSocket* socket) const
 {
-    QJsonObject contactsDataJson;
-    QJsonArray contactsArrayJson;
-    std::transform(m_contacts[username].begin(),
-                   m_contacts[username].end(),
-                   std::back_insert_iterator<QJsonArray>(contactsArrayJson),
-                   [&](QString s){
-                        return QJsonObject({
-                                            {"contact", s},
-                                            {"online", isOnline(s)}
-                                           });
-                    });
-    contactsDataJson.insert("type", setMessageType(MessageType::Contacts));
-    contactsDataJson.insert("to",username);
-    contactsDataJson.insert("contacts", contactsArrayJson);
-    sendMessageTo(senderSocket, contactsDataJson);
+	QJsonObject contactsDataJson;
+	QJsonArray contactsArrayJson;
+	std::transform(m_contacts[username].begin(),
+				   m_contacts[username].end(),
+				   std::back_insert_iterator<QJsonArray>(contactsArrayJson),
+				   [&](QString s){
+						return QJsonObject({
+											{"contact", s},
+											{"online", isOnline(s)}
+										   });
+					});
+	contactsDataJson.insert("type", setMessageType(MessageType::Contacts));
+	contactsDataJson.insert("to",username);
+	contactsDataJson.insert("contacts", contactsArrayJson);
+	sendMessageToSocket(socket, contactsDataJson);
+}
+void Server::sendGroupsFor(QString username, QSslSocket* socket) const{
+	QJsonObject groupsDataJson;
+	QJsonArray groupsArrayJson;
+	std::transform(m_usernameToGroups[username].begin(),
+				   m_usernameToGroups[username].end(),
+				   std::back_insert_iterator<QJsonArray>(groupsArrayJson),
+				   [&](int groupId){
+						chatGroup gr = m_groups[groupId];
+						qDebug() << "grupa " << gr.groupName << " ima id " << gr.id << "i clanove " << gr.members;
+						QJsonArray membersArray;
+						for(auto member : gr.members){
+							membersArray.append(member);
+						}
+						return QJsonObject({
+											{"groupId", groupId},
+											{"groupName", gr.groupName},
+											{"members", membersArray}
+										   });
+					});
+	groupsDataJson.insert("type", setMessageType(MessageType::Groups));
+	groupsDataJson.insert("to",username);
+	groupsDataJson.insert("groups", groupsArrayJson);
+	sendMessageToSocket(socket, groupsDataJson);
 }
 
 void Server::sendUnreadMessages(const QString& username, QSslSocket* socket)
 {
     qDebug() << "Sending unread messages for " << username;
     for(auto message : m_unreadMessages[username]){
-        sendMessageTo(socket, message);
+		sendMessageToSocket(socket, message);
     }
     m_unreadMessages.remove(username);
+
 
 }
 
@@ -311,6 +365,7 @@ void Server::authentication(QJsonObject jsonResponseObject, QSslSocket* senderSo
 		qDebug() << "AUTH FOR USER " << tmpUsername << " SUCCESSFUL";
 
 		sendContactsFor(tmpUsername, senderSocket);
+		sendGroupsFor(tmpUsername, senderSocket);
 		notifyContacts(tmpUsername, MessageType::ContactLogin);
 		if(hasUnreadMessages(tmpUsername)){
 			sendUnreadMessages(tmpUsername, senderSocket);
@@ -331,18 +386,59 @@ void Server::checkContactExistence(const QString& tmpFrom, const QString& tmpTo)
 
 void Server::forwardMessage(const QString& to, const QJsonObject& message)
 {
-    bool ret = sendMessageTo(	m_usernameToSocket[to],
-                                message);
-    if(!ret){
-        qDebug() << "WEIRD! User " << to << "is not online, afterall";
-        //adding message to buffer for next time user logs in
-        m_unreadMessages[to].append(message);
-    }
+	bool ret = sendMessageToSocket(	m_usernameToSocket[to],
+								message);
+	if(!ret){
+		qDebug() << "WEIRD! User " << to << "is not online, afterall";
+		//adding message to buffer for next time user logs in
+		m_unreadMessages[to].append(message);
+	}
 }
 
 bool Server::isOnline(const QString& username) const
 {
     return m_usernameToSocket.contains(username);
+}
+
+void Server::addGroupToXml(const chatGroup& group){
+	QDomElement groupTag = createNewXmlElement("group", "",
+											   "groupName", group.groupName);
+	QDomElement groupId = createNewXmlElement("id", QString::number(group.id));
+	QDomElement members = createNewXmlElement("members");
+	for(auto member : group.members){
+		members.appendChild(createNewXmlElement("member", member));
+	}
+	groupTag.appendChild(groupId);
+	groupTag.appendChild(members);
+	m_dataDoc.documentElement().appendChild(groupTag);
+	saveXMLFile();
+
+}
+
+void Server::createGroup(const QJsonObject& jsonResponseObject)
+{
+	QJsonArray jsonMemebers = jsonResponseObject["members"].toArray();
+	QSet<QString> groupMembers;
+	for(auto member: jsonMemebers){
+		groupMembers.insert(member.toVariant().toString());
+	}
+	QString groupName = jsonResponseObject["groupName"].toString();
+	chatGroup gr;
+	gr.groupName = groupName;
+	gr.members = groupMembers;
+	gr.id = m_nextGroupId;
+	m_nextGroupId++;
+	m_groups[gr.id] = gr;
+	jsonResponseObject["id"] = gr.id;
+	for(auto member: groupMembers){
+		if(isOnline(member)){
+			forwardMessage(member, jsonResponseObject);
+		}
+		else{
+			m_unreadMessages[member].append(jsonResponseObject);
+		}
+	}
+	addGroupToXml(gr);
 }
 
 //user exists if it exists in m_authData
@@ -401,23 +497,41 @@ void Server::readMessage(){
     //if sent data is text message, forward it only to the intended recepient
 	else if(jsonResponseObject["type"] == MessageType::Text
 			|| jsonResponseObject["type"] == MessageType::Image){
-        QString tmpTo = jsonResponseObject["to"].toString();
-        QString tmpFrom = jsonResponseObject["from"].toString();
 
-        if(jsonResponseObject["type"] == MessageType::Image) {
-            qDebug() << jsonResponseObject["id"].toString() << " - " << jsonResponseObject["counter"].toString();
-        }
-        checkContactExistence(tmpFrom, tmpTo);
-        //qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
+		if(jsonResponseObject.contains("groupId")){
+			int groupId = jsonResponseObject["groupId"].toInt();
+			auto gr = m_groups[groupId];
+			for(auto member : gr.members){
+				if(member != jsonResponseObject["from"].toString()){
+					if(isOnline(member)){
+						forwardMessage(member, jsonResponseObject);
+					}
+					else{
+						//adding message to buffer for next time user logs in
+						m_unreadMessages[member].append(jsonResponseObject);
+					}
+				}
+			}
+		}
+		else{
+			QString tmpTo = jsonResponseObject["to"].toString();
+			QString tmpFrom = jsonResponseObject["from"].toString();
 
-        if(isOnline(tmpTo)){
-            forwardMessage(tmpTo, jsonResponseObject);
-        }
-        else{
-            //adding message to buffer for next time user logs in
-            m_unreadMessages[tmpTo].append(jsonResponseObject);
-        }
+			checkContactExistence(tmpFrom, tmpTo);
+			//qDebug() << jsonResponse.toJson(QJsonDocument::Compact);
+
+			if(isOnline(tmpTo)){
+				forwardMessage(tmpTo, jsonResponseObject);
+			}
+			else{
+				//adding message to buffer for next time user logs in
+				m_unreadMessages[tmpTo].append(jsonResponseObject);
+			}
+		}
     }
+	else if(msgType == MessageType::CreateGroup){
+		createGroup(jsonResponseObject);
+	}
     else
     {
         qDebug() << "UNKNOWN MESSAGE TYPE";
