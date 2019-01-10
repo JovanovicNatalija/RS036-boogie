@@ -44,6 +44,7 @@ public:
 signals:
     void showMsg(const QString& msgFrom,const QString& msg);
     void showContacts(const QString& contact, bool online);
+    void showGroups(const QString& contact, bool online);
     void clearContacts();
     void badPass();
     void alreadyLogIn();

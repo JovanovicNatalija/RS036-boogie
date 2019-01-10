@@ -81,7 +81,7 @@ void Client::refreshContactsAndGroups() {
         emit showContacts(i.key(), i.value());
     }
     for(auto group : m_groupInfos) {
-        emit showContacts(group.groupName, true);
+        emit showGroups(group.groupName, true);
     }
 }
 
@@ -132,11 +132,10 @@ void Client::readMsg() {
         addGroup(jsonMsgObj);
     }
     else if(msgType == MessageType::Groups) {
-        QJsonArray groupsArray = jsonMsgObj["groups"];
-        for(QJsonObject gr: groupsArray){
-            addGroup(gr);
+        QJsonArray groupsArray = jsonMsgObj["groups"].toArray();
+        for(auto gr: groupsArray){
+            addGroup(gr.toObject());
         }
-        qDebug() << jsonMsgObj;
     }
 	else if(msgType == MessageType::BadPass){
         emit badPass();
@@ -161,7 +160,7 @@ void Client::readMsg() {
 
 }
 
-void addGroup(QJsonObject grInfos) {
+void Client::addGroup(QJsonObject grInfos) {
     QJsonArray membersJsonArray = grInfos["members"].toArray();
     QSet<QString> groupMembers;
     for(auto member: membersJsonArray){

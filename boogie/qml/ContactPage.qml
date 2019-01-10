@@ -22,10 +22,15 @@ Page {
 
         onClearContacts: {
             contactModel.clear()
+            contactModelForGroups.clear()
         }
 
         onShowContacts: {
             contactModel.append({con:contact, index: online})
+            contactModelForGroups.append({con:contact, index: online})
+        }
+        onShowGroups: {
+            contactModel.append({con:contact, index:online})
         }
 
     }
@@ -123,6 +128,9 @@ Page {
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
         onClosed: Client.clearGroupSet()
+        ListModel{
+            id: contactModelForGroups
+        }
         ListView{
             width: parent.width
             layoutDirection: Qt.RightToLeft
@@ -134,7 +142,7 @@ Page {
             bottomMargin: 48
             rightMargin: 48
             spacing: 20
-            model: contactModel
+            model: contactModelForGroups
             header: RowLayout {
                 TextField {
                     id: groupNameField
@@ -150,6 +158,11 @@ Page {
                         groupNameField.clear()
                         groupPopup.close()
                     }
+                }
+                Keys.onReturnPressed: {
+                    Client.sendGroupInfos(groupNameField.text)
+                    groupNameField.clear()
+                    groupPopup.close()
                 }
             }
             delegate: ItemDelegate {
