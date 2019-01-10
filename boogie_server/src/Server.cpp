@@ -133,11 +133,11 @@ void Server::loadData(){
 }
 void Server::newConnection(){
     if(this->hasPendingConnections()){
-        QTcpSocket* client = this->nextPendingConnection();
+		QTcpSocket* client = this->nextPendingConnection();
 
-        connect(client, &QTcpSocket::disconnected, this,
+		connect(client, &QTcpSocket::disconnected, this,
                 &Server::userDisconnected);
-        connect(client, &QTcpSocket::readyRead, this, &Server::readMessage);
+		connect(client, &QTcpSocket::readyRead, this, &Server::readMessage);
 
     }
 }
@@ -145,7 +145,7 @@ void Server::newConnection(){
 void Server::notifyContacts(const QString& username, const MessageType& m) const
 {
     for(auto user : m_contacts[username]){
-        QTcpSocket* tmp = m_usernameToSocket[user];
+		QSslSocket* tmp = m_usernameToSocket[user];
         if(tmp == nullptr)//contact not online
             continue;
         QJsonObject notification;
@@ -159,7 +159,7 @@ void Server::notifyContacts(const QString& username, const MessageType& m) const
 
 void Server::userDisconnected(){
 
-    QTcpSocket *disconnectedClient = qobject_cast<QTcpSocket *>(QObject::sender());
+	QSslSocket *disconnectedClient = qobject_cast<QSslSocket *>(QObject::sender());
     QString username = m_usernameToSocket.key(disconnectedClient);//linear time but its called rarely so its ok
     if(username != ""){
         m_usernameToSocket.remove(username);
@@ -173,15 +173,11 @@ void Server::userDisconnected(){
     disconnectedClient->deleteLater();
 }
 
-bool Server::sendMessageTo(QTcpSocket* recepient, const QJsonObject& message) const
+bool Server::sendMessageTo(QSslSocket *recepient, const QJsonObject& message) const
 {
     QString tmp = packMessage(message);
 	int msgLength = tmp.size();
-	QByteArray byteArray;
-	QDataStream stream(&byteArray, QIODevice::WriteOnly);
-	stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
-	stream << msgLength;
-	recepient->write(byteArray);
+	writeMessageLengthToSocket(recepient, msgLength);
     if(recepient->write(tmp.toLocal8Bit().data()) != -1){
         recepient->flush();
         return true;
@@ -190,7 +186,7 @@ bool Server::sendMessageTo(QTcpSocket* recepient, const QJsonObject& message) co
     else return false;
 }
 
-bool Server::sendServerMessageTo(QTcpSocket* receipient, const MessageType& msgType
+bool Server::sendServerMessageTo(QSslSocket* receipient, const MessageType& msgType
                                  , const QString& username) const
 {
     QJsonObject response;
@@ -199,12 +195,7 @@ bool Server::sendServerMessageTo(QTcpSocket* receipient, const MessageType& msgT
         response.insert("to", username);
     }
 	QString tmp = packMessage(response).toLocal8Bit().data();
-	int msgLength = tmp.size();
-	QByteArray byteArray;
-	QDataStream stream(&byteArray, QIODevice::WriteOnly);
-	stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of DataStream wouldn't change much
-	stream << msgLength;
-	receipient->write(byteArray);
+	writeMessageLengthToSocket(receipient, tmp.size());
 	bool ret = -1 != receipient->write(tmp.toLocal8Bit().data());
     if(ret){
         receipient->flush();
@@ -269,7 +260,7 @@ bool isNumeric(QByteArray arr){
                        [](char c){return isdigit(c);});
 }
 
-void Server::sendContactsFor(QString username, QTcpSocket* senderSocket) const
+void Server::sendContactsFor(QString username, QSslSocket* senderSocket) const
 {
     QJsonObject contactsDataJson;
     QJsonArray contactsArrayJson;
@@ -288,7 +279,7 @@ void Server::sendContactsFor(QString username, QTcpSocket* senderSocket) const
     sendMessageTo(senderSocket, contactsDataJson);
 }
 
-void Server::sendUnreadMessages(const QString& username, QTcpSocket* socket)
+void Server::sendUnreadMessages(const QString& username, QSslSocket* socket)
 {
     qDebug() << "Sending unread messages for " << username;
     for(auto message : m_unreadMessages[username]){
@@ -303,7 +294,7 @@ bool Server::hasUnreadMessages(const QString& username) const
     return m_unreadMessages.contains(username);
 }
 
-void Server::authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSocket)
+void Server::authentication(QJsonObject jsonResponseObject, QSslSocket* senderSocket)
 {
 	if(m_usernameToSocket.contains(jsonResponseObject["username"].toString())){
 		qDebug() << "ALLREADY LOGGED IN";
@@ -361,26 +352,17 @@ bool Server::userExists(const QString& username) const
 }
 
 void Server::readMessage(){
-    QTcpSocket* senderSocket = qobject_cast<QTcpSocket*>(sender());
-	int length = -1;
+	QSslSocket* senderSocket = qobject_cast<QSslSocket*>(sender());
 	if(!m_socketBytesLeft.contains(senderSocket)
-		|| m_socketBytesLeft[senderSocket] == 0){//socket doesnt have any unread data
-		//reading first 4 characters, they represent length of json encoded message
-		//TODO: test if there is less then 4 bytes avalible
-		QByteArray messageLength = senderSocket->read(sizeof(int));
-		QDataStream stream(&messageLength, QIODevice::ReadOnly);
-		stream.setVersion(QDataStream::Qt_5_10); //to ensure that new version of QDataStream wouldn't change much
-		stream >> length;
-		qDebug() << "ARRIVED: " << length;
-		m_socketBytesLeft[senderSocket] = length;
+			|| m_socketBytesLeft[senderSocket] == 0){//socket doesnt have any unread data
+
+		m_socketBytesLeft[senderSocket] = readMessageLenghtFromSocket(senderSocket);
 	}
 	if(senderSocket->bytesAvailable() < m_socketBytesLeft[senderSocket]){
 		//not everything has arived, we wait for new data
-		qDebug() << "missing " << m_socketBytesLeft[senderSocket] - senderSocket->bytesAvailable() << " bytes";
 		return;
 	}
-	//we are here if socket >= bytes avalibale
-	qDebug() << "NOTHING MISSING! " << senderSocket->bytesAvailable();
+	//we are here if socket has >= bytes avalibale
 
     //reading next messageLength bytes
 	QByteArray data = senderSocket->read(m_socketBytesLeft[senderSocket]);

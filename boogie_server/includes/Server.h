@@ -44,7 +44,7 @@ private:
 	QDomNodeList m_users;
 	QHash<QString, QString> m_authData;
 	QHash<QString, QVector<QString>> m_contacts;
-	QHash<QString, QTcpSocket*> m_usernameToSocket;
+	QHash<QString, QSslSocket*> m_usernameToSocket;
 	QHash<QTcpSocket*, int> m_socketBytesLeft;
 	QHash<QString, QVector<QJsonObject>> m_unreadMessages;
 
@@ -64,18 +64,18 @@ private:
 	/*CONTACT FUNCTIONS*/
 	void addNewContact(const QString& tmpFrom, const QString& tmpTo);
 	void notifyContacts(const QString& username, const MessageType& m) const;
-	void sendContactsFor(QString username, QTcpSocket* senderSocket) const;
+	void sendContactsFor(QString username, QSslSocket* senderSocket) const;
 
 	/*MESSAGE FUNCTIONS*/
-	bool sendMessageTo(QTcpSocket* recepient, const QJsonObject& message) const;
-	bool sendServerMessageTo(QTcpSocket* receipient, const MessageType& msgType
-										,const QString& username = "") const;
+	bool sendMessageTo(QSslSocket *recepient, const QJsonObject& message) const;
+	bool sendServerMessageTo(QSslSocket *receipient, const MessageType& msgType
+										, const QString& username = "") const;
 	void forwardMessage(const QString& to, const QJsonObject& message);
 
 	/*USER RELATED FUNCTIONS*/
 	void createUser(const QString& pass, const QString& username);
-	void sendUnreadMessages(const QString& username, QTcpSocket* socket);
-	void authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSocket);
+	void sendUnreadMessages(const QString& username, QSslSocket* socket);
+	void authentication(QJsonObject jsonResponseObject, QSslSocket *senderSocket);
 
 	/*HELPER FUNCTIONS*/
 	bool userExists(const QString& username) const;
