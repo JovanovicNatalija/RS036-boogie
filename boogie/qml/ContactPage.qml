@@ -50,7 +50,6 @@ Page {
         header: ColumnLayout {
             id: glMainLayout
             width: parent.width
-
             RowLayout{
                 Label{
                    id: addContact

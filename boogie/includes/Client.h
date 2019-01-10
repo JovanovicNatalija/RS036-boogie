@@ -11,26 +11,30 @@
 #include <chrono>
 #include <QSet>
 #include "../util/util.h"
-class Client : public QSslSocket
+#include <QPixmap>
 
+
+class Client : public QSslSocket
 {
     Q_OBJECT
 public:
-	Client(QObject* parent = nullptr);
-	Q_INVOKABLE void connectToServer(const QString& username,const QString& ip,
-									 quint16 port = 10000);
+    Client(QObject* parent = nullptr);
+    Q_INVOKABLE void connectToServer(const QString& username,
+                                     const QString& ip,
+                                     quint16 port = 10000);
     Q_INVOKABLE void sendMsg(const QString& str);
     Q_INVOKABLE void sendAuthData(QString password);
     Q_INVOKABLE void sendMsgData(const QString& to,const QString& msg);
-	Q_INVOKABLE void addMsgToBuffer(const QString& sender,
-									const QString& inConversationWith,
-									const QString& msg);
+    Q_INVOKABLE void addMsgToBuffer(const QString& sender,
+                                    const QString& inConversationWith,
+                                    const QString& msg,
+                                    const QString& type);
     Q_INVOKABLE void writeInXml();
     Q_INVOKABLE void readFromXml();
     Q_INVOKABLE void displayOnConvPage(const QString& inConversationWith);
     Q_INVOKABLE void addNewContact(const QString& name, bool online);
     Q_INVOKABLE void checkNewContact(const QString& name);
-    Q_INVOKABLE void sendPicture(const QString& filePath);
+    Q_INVOKABLE void sendPicture(const QString& to, const QString& filePath);
     Q_INVOKABLE void disconnectFromServer();
     Q_INVOKABLE QString username();
     Q_INVOKABLE void addContactToGroupSet(QString contact);
@@ -43,8 +47,9 @@ public:
     void createXml() const;
 
 signals:
+	void showPicture(const QString& msgFrom, const QString& path);
     void showMsg(const QString& msgFrom,const QString& msg);
-    void showMsgForGroup(int groupId, const QString& msgFrom, const QString& msg);
+	void showMsgForGroup(int groupId, const QString& msgFrom, const QString& msg);
     void showContacts(const QString& contact, bool online,int groupId);
     void showGroups(const QString& contact, bool online, int groupId);
     void clearContacts();
@@ -54,26 +59,19 @@ signals:
 
 public slots:
     void readMsg();
-	void sslErrors(const QList<QSslError> &errors);
-
-public:
-    //pravimo buffer u vidu mape koja sadrzi podatke: kljuc je username one osobe sa kojom je korisnik
-    //u konverzaciji, vrednost je touple od 3 stringa prvi predstavlja username onoga ko je poslao poruku,
-    // drugi je sama poruka a treci vreme slanja poruke
-    std::map<QString, std::vector<std::tuple<QString, QString, QString>>> msgDataBuffer;
-    std::map<QString, unsigned long> msgInfos;
-    std::map<QString, bool> contactInfos;
-    unsigned long counter = 0;
+    void sslErrors(const QList<QSslError> &errors);
 
 private:
     QString m_username;
-    QHash<QString, QVector<std::tuple<QString, QString, QString>>> m_msgDataBuffer;
+    QHash<QString, QVector<QPair<QString, std::tuple<QString, QString, QString>>>> m_msgDataBuffer;
     QHash<QString, int> m_msgIndexBegin;
     QHash<QString, bool> m_contactInfos;
     std::vector<chatGroup> m_groupInfos;
-    unsigned long m_msgCounter = 0;
-    QSet<QString> m_contactsInGroups;
-
+	unsigned long m_msgCounter = 0;
+	QSet<QString> m_contactsInGroups;
+    unsigned long m_imgCounter = 0;
+    int m_imageNum = 0;
+	int m_bytesToRead = 0;
 };
 
 #endif // CLIENT_H

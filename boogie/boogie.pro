@@ -14,12 +14,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 HEADERS += \
     includes/Client.h \
-    ../util/util.h
+    ../util/util.h \
 
 SOURCES += \
     src/main.cpp \
     src/Client.cpp \
-    ../util/util.cpp
+    ../util/util.cpp \
 
 RESOURCES += qml.qrc \
 
