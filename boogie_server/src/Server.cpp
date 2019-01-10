@@ -155,7 +155,6 @@ void Server::loadData(){
 		}
 		gr.members = members;
 		members.clear();//clear it for next iteration
-		qDebug() << "grupa " << gr.groupName << " ima id " << gr.id << "i clanove " << gr.members;
 		m_groups[currGroupId] = gr;
 	}
 
@@ -181,7 +180,7 @@ void Server::notifyContacts(const QString& username, const MessageType& m) const
 		notification.insert("type", setMessageType(m));
 		notification.insert("to", user);
 		notification.insert("contact", username);
-		sendMessageTo(tmp, notification);
+		sendMessageToSocket(tmp, notification);
 	}
 }
 
@@ -202,7 +201,7 @@ void Server::userDisconnected(){
 	disconnectedClient->deleteLater();
 }
 
-bool Server::sendMessageTo(QTcpSocket* recepient, const QJsonObject& message) const
+bool Server::sendMessageToSocket(QTcpSocket* recepient, const QJsonObject& message) const
 {
 	QString tmp = packMessage(message);
 	if(recepient->write(tmp.toLocal8Bit().data()) != -1){
@@ -301,7 +300,7 @@ void Server::sendContactsFor(QString username, QTcpSocket* socket) const
 	contactsDataJson.insert("type", setMessageType(MessageType::Contacts));
 	contactsDataJson.insert("to",username);
 	contactsDataJson.insert("contacts", contactsArrayJson);
-	sendMessageTo(socket, contactsDataJson);
+	sendMessageToSocket(socket, contactsDataJson);
 }
 void Server::sendGroupsFor(QString username, QTcpSocket* socket) const{
 	QJsonObject groupsDataJson;
@@ -325,7 +324,7 @@ void Server::sendGroupsFor(QString username, QTcpSocket* socket) const{
 	groupsDataJson.insert("type", setMessageType(MessageType::Groups));
 	groupsDataJson.insert("to",username);
 	groupsDataJson.insert("groups", groupsArrayJson);
-	sendMessageTo(socket, groupsDataJson);
+	sendMessageToSocket(socket, groupsDataJson);
 }
 
 void Server::sendUnreadMessages(const QString& username, QTcpSocket* socket)
@@ -333,7 +332,7 @@ void Server::sendUnreadMessages(const QString& username, QTcpSocket* socket)
 	qDebug() << "Sending unread messages for " << username;
 	for(auto message : m_unreadMessages[username]){
 		qDebug() << QJsonDocument(message).toJson(QJsonDocument::Compact);
-		sendMessageTo(socket, message);
+		sendMessageToSocket(socket, message);
 	}
 	m_unreadMessages.remove(username);
 
@@ -384,7 +383,7 @@ void Server::checkContactExistence(const QString& tmpFrom, const QString& tmpTo)
 
 void Server::forwardMessage(const QString& to, const QJsonObject& message)
 {
-	bool ret = sendMessageTo(	m_usernameToSocket[to],
+	bool ret = sendMessageToSocket(	m_usernameToSocket[to],
 								message);
 	if(!ret){
 		qDebug() << "WEIRD! User " << to << "is not online, afterall";
@@ -411,6 +410,32 @@ void Server::addGroupToXml(const chatGroup& group){
 	m_dataDoc.documentElement().appendChild(groupTag);
 	saveXMLFile();
 
+}
+
+void Server::createGroup(const QJsonObject& jsonResponseObject)
+{
+	QJsonArray jsonMemebers = jsonResponseObject["members"].toArray();
+	QSet<QString> groupMembers;
+	for(auto member: jsonMemebers){
+		groupMembers.insert(member.toVariant().toString());
+	}
+	QString groupName = jsonResponseObject["groupName"].toString();
+	chatGroup gr;
+	gr.groupName = groupName;
+	gr.members = groupMembers;
+	gr.id = m_nextGroupId;
+	m_nextGroupId++;
+	m_groups[gr.id] = gr;
+	jsonResponseObject["id"] = gr.id;
+	for(auto member: groupMembers){
+		if(isOnline(member)){
+			forwardMessage(member, jsonResponseObject);
+		}
+		else{
+			m_unreadMessages[member].append(jsonResponseObject);
+		}
+	}
+	addGroupToXml(gr);
 }
 
 void Server::readMessage(){
@@ -488,28 +513,7 @@ void Server::readMessage(){
 		}
 	}
 	else if(msgType == MessageType::CreateGroup){
-		QJsonArray jsonMemebers = jsonResponseObject["members"].toArray();
-		QSet<QString> groupMembers;
-		for(auto member: jsonMemebers){
-			groupMembers.insert(member.toVariant().toString());
-		}
-		QString groupName = jsonResponseObject["groupName"].toString();
-		chatGroup gr;
-		gr.groupName = groupName;
-		gr.members = groupMembers;
-		gr.id = m_nextGroupId;
-		m_nextGroupId++;
-		m_groups[gr.id] = gr;
-		jsonResponseObject["id"] = gr.id;
-		for(auto member: groupMembers){
-			if(isOnline(member)){
-				forwardMessage(member, jsonResponseObject);
-			}
-			else{
-				m_unreadMessages[member].append(jsonResponseObject);
-			}
-		}
-		addGroupToXml(gr);
+		createGroup(jsonResponseObject);
 	}
 	else
 	{
