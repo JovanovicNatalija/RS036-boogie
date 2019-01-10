@@ -38,6 +38,7 @@ public:
     Q_INVOKABLE void sendGroupInfos(QString groupName);
     Q_INVOKABLE void clearGroupSet();
     Q_INVOKABLE void refreshContactsAndGroups();
+    Q_INVOKABLE void addGroup(QJsonObject grInfos);
     void createXml() const;
 
 signals:

@@ -97,7 +97,6 @@ void Client::readMsg() {
 	}
 	if(msgType == MessageType::Text){
         QString message = jsonMsgObj["msg"].toString();
-		//message = splitMessage(message);
 		addMsgToBuffer(jsonMsgObj["from"].toString(),
 						jsonMsgObj["from"].toString(),
                         message);
@@ -111,7 +110,6 @@ void Client::readMsg() {
 		for(auto con : contactsJsonArray){
 			QJsonObject jsonObj = con.toObject();
             m_contactInfos[jsonObj["contact"].toString()] = jsonObj["online"].toBool();
-            //emit showContacts(jsonObj["contact"].toString(), jsonObj["online"].toBool());
 		}
         refreshContactsAndGroups();
 	}
@@ -131,17 +129,14 @@ void Client::readMsg() {
         }
     }
     else if(msgType == MessageType::CreateGroup) {
-        QJsonArray membersJsonArray = jsonMsgObj["members"].toArray();
-        QSet<QString> groupMembers;
-        for(auto member: membersJsonArray){
-            groupMembers.insert(member.toVariant().toString());
+        addGroup(jsonMsgObj);
+    }
+    else if(msgType == MessageType::Groups) {
+        QJsonArray groupsArray = jsonMsgObj["groups"];
+        for(QJsonObject gr: groupsArray){
+            addGroup(gr);
         }
-        chatGroup gr;
-        gr.groupName = jsonMsgObj["groupName"].toString();
-        gr.members = groupMembers;
-        gr.id = jsonMsgObj["id"].toInt();
-        m_groupInfos.push_back(gr);
-        refreshContactsAndGroups();
+        qDebug() << jsonMsgObj;
     }
 	else if(msgType == MessageType::BadPass){
         emit badPass();
@@ -164,6 +159,20 @@ void Client::readMsg() {
 		emit readyRead();
 	}
 
+}
+
+void addGroup(QJsonObject grInfos) {
+    QJsonArray membersJsonArray = grInfos["members"].toArray();
+    QSet<QString> groupMembers;
+    for(auto member: membersJsonArray){
+        groupMembers.insert(member.toVariant().toString());
+    }
+    chatGroup gr;
+    gr.groupName = grInfos["groupName"].toString();
+    gr.members = groupMembers;
+    gr.id = grInfos["id"].toInt();
+    m_groupInfos.push_back(gr);
+    refreshContactsAndGroups();
 }
 
 void Client::sendMsg(const QString& str) {
