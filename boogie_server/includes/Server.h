@@ -42,12 +42,14 @@ private:
 	const QString DATA_FILE_PATH = QDir::currentPath() + "/data.xml";
 
 	QDomNodeList m_users;
+	QDomNodeList m_groupsNodeList;
 	QHash<QString, QString> m_authData;
 	QHash<QString, QVector<QString>> m_contacts;
+	QHash<QString, QVector<int>> m_usernameToGroups;
 	QHash<QString, QTcpSocket*> m_usernameToSocket;
 	QHash<QString, QVector<QJsonObject>> m_unreadMessages;
-	QVector<chatGroup> m_groups;
-	int m_nextGroupId = 0;
+	QHash<int,chatGroup> m_groups;
+	int m_nextGroupId;
 	bool m_isInitialized;
 	std::string m_errorMessage;
 
@@ -66,6 +68,7 @@ private:
 	void addNewContact(const QString& tmpFrom, const QString& tmpTo);
 	void notifyContacts(const QString& username, const MessageType& m) const;
 	void sendContactsFor(QString username, QTcpSocket* senderSocket) const;
+	void sendGroupsFor(QString username, QTcpSocket* socket) const;
 
 	/*MESSAGE FUNCTIONS*/
 	bool sendMessageTo(QTcpSocket* recepient, const QJsonObject& message) const;
