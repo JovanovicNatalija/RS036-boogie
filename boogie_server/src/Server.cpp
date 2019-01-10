@@ -430,12 +430,11 @@ void Server::createGroup(const QJsonObject& jsonResponseObject)
 	m_nextGroupId++;
 	m_groups[gr.id] = gr;
 	jsonResponseObject["id"] = gr.id;
+	qDebug() << "novi id: " << gr.id;
 	for(auto member: groupMembers){
+		m_usernameToGroups[member].push_back(gr.id);
 		if(isOnline(member)){
 			forwardMessage(member, jsonResponseObject);
-		}
-		else{
-			m_unreadMessages[member].append(jsonResponseObject);
 		}
 	}
 	addGroupToXml(gr);
@@ -501,6 +500,7 @@ void Server::readMessage(){
 		if(jsonResponseObject.contains("groupId")){
 			int groupId = jsonResponseObject["groupId"].toInt();
 			auto gr = m_groups[groupId];
+			qDebug() << "msg for group " << groupId;
 			for(auto member : gr.members){
 				if(member != jsonResponseObject["from"].toString()){
 					if(isOnline(member)){
