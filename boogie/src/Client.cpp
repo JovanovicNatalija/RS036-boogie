@@ -78,10 +78,10 @@ void Client::addNewContact(const QString& name, bool online) {
 void Client::refreshContactsAndGroups() {
     emit clearContacts();
     for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
-        emit showContacts(i.key(), i.value());
+        emit showContacts(i.key(), i.value(), -1);
     }
     for(auto group : m_groupInfos) {
-        emit showGroups(group.groupName, true);
+        emit showGroups(group.groupName, true, group.id);
     }
 }
 
@@ -96,13 +96,21 @@ void Client::readMsg() {
 		return;
 	}
 	if(msgType == MessageType::Text){
-        QString message = jsonMsgObj["msg"].toString();
-		addMsgToBuffer(jsonMsgObj["from"].toString(),
-						jsonMsgObj["from"].toString(),
-                        message);
+        if(jsonMsgObj.contains("groupId")){
+            int groupId = jsonMsgObj["groupId"].toInt();
+            QString message = jsonMsgObj["msg"].toString();
+            emit showMsgForGroup(groupId, jsonMsgObj["from"].toString(), message);
 
-		emit showMsg(jsonMsgObj["from"].toString(),
-                    message);
+
+        } else {
+            QString message = jsonMsgObj["msg"].toString();
+            addMsgToBuffer(jsonMsgObj["from"].toString(),
+                            jsonMsgObj["from"].toString(),
+                            message);
+
+            emit showMsg(jsonMsgObj["from"].toString(),
+                        message);
+        }
 
 	}
 	else if(msgType == MessageType::Contacts){
@@ -169,7 +177,7 @@ void Client::addGroup(QJsonObject grInfos) {
     chatGroup gr;
     gr.groupName = grInfos["groupName"].toString();
     gr.members = groupMembers;
-    gr.id = grInfos["id"].toInt();
+    gr.id = grInfos["groupId"].toInt();
     m_groupInfos.push_back(gr);
     refreshContactsAndGroups();
 }
@@ -345,6 +353,18 @@ void Client::clearGroupSet() {
 }
 void Client::sendPicture(const QString& filePath)  {
     qDebug() << filePath;
+}
+
+void Client::sendGroupMsgData(int groupId, const QString& msg) {
+    QJsonObject jsonMessageObject;
+    jsonMessageObject.insert("type", setMessageType(MessageType::Text));
+    jsonMessageObject.insert("from", m_username);
+    jsonMessageObject.insert("groupId", groupId);
+    jsonMessageObject.insert("msg", msg);
+    if(!jsonMessageObject.empty()) {
+        QString fullMsgString = packMessage(jsonMessageObject);
+        sendMsg(fullMsgString);
+    }
 }
 
 //saljemo poruku i podatke o njoj na server

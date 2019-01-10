@@ -39,12 +39,14 @@ public:
     Q_INVOKABLE void clearGroupSet();
     Q_INVOKABLE void refreshContactsAndGroups();
     Q_INVOKABLE void addGroup(QJsonObject grInfos);
+    Q_INVOKABLE void sendGroupMsgData(int groupId, const QString& msg);
     void createXml() const;
 
 signals:
     void showMsg(const QString& msgFrom,const QString& msg);
-    void showContacts(const QString& contact, bool online);
-    void showGroups(const QString& contact, bool online);
+    void showMsgForGroup(int groupId, const QString& msgFrom, const QString& msg);
+    void showContacts(const QString& contact, bool online,int groupId);
+    void showGroups(const QString& contact, bool online, int groupId);
     void clearContacts();
     void badPass();
     void alreadyLogIn();

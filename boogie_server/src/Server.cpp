@@ -464,13 +464,15 @@ void Server::readMessage(){
 			int groupId = jsonResponseObject["groupId"].toInt();
 			auto gr = m_groups[groupId];
 			for(auto member : gr.members){
-				if(isOnline(member)){
-					forwardMessage(member, jsonResponseObject);
-				}
-				else{
-					//adding message to buffer for next time user logs in
-					m_unreadMessages[member].append(jsonResponseObject);
-				}
+                if(member != jsonResponseObject["from"].toString()){
+                    if(isOnline(member)){
+                        forwardMessage(member, jsonResponseObject);
+                    }
+                    else{
+                        //adding message to buffer for next time user logs in
+                        m_unreadMessages[member].append(jsonResponseObject);
+                    }
+                }
 			}
 		}
 		else{

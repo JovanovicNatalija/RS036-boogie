@@ -13,6 +13,7 @@ Page {
 
     property string inConversationWith
     property int index : 0
+    property int grId
 
     header: ToolBar {
         ToolButton {
@@ -68,11 +69,18 @@ Page {
                 messageModel.append({message: msg, index : 0})
             } else if(Client.username() === msgFrom) {
                 messageModel.append({message: msg, index : 1})
-            } else {
-
             }
         }
-
+        onShowMsgForGroup: {
+            if(grId == groupId){
+                if(Client.username() === msgFrom){
+                    messageModel.append({message: msgFrom + ":\n" + msg, index : 1})
+                }
+                else {
+                    messageModel.append({message: msgFrom + ":\n" + msg, index : 0})
+                }
+            }
+        }
     }
 
     ColumnLayout {
@@ -138,11 +146,17 @@ Page {
                     placeholderText: qsTr("Poruka")
 					wrapMode: Text.WordWrap
                     Keys.onReturnPressed: {
-                        if(messageField.text.trim() !== "") {
-                            Client.sendMsgData(inConversationWith, messageField.text.trim())
-                            Client.addMsgToBuffer(Client.username(), inConversationWith, messageField.text.trim())
-                            messageModel.append({message: messageField.text.trim(), index : 1})
+                        if(grId == -1){
+                            if(messageField.text.trim() !== "") {
+                                Client.sendMsgData(inConversationWith, messageField.text.trim())
+                                Client.addMsgToBuffer(Client.username(), inConversationWith, messageField.text.trim())
+                                messageModel.append({message: messageField.text.trim(), index : 1})
+                            }
+                        }else {
+                            Client.sendGroupMsgData(grId, messageField.text.trim())
+                            messageModel.append({message: messageField.text.trim(), index: 1})
                         }
+
                         messageField.clear()
                     }
                 }
@@ -153,11 +167,17 @@ Page {
                     text: qsTr("Posalji")
                     enabled: messageField.length > 0
                     onClicked: {
-                        if(messageField.text.trim() !== "") {
-                            Client.sendMsgData(inConversationWith, messageField.text.trim())
-                            Client.addMsgToBuffer(Client.username(), inConversationWith, Client.splitMessage(messageField.text.trim()))
-                            messageModel.append({message: Client.splitMessage(messageField.text.trim()), index : 1});
+                        if(grId == -1){
+                            if(messageField.text.trim() !== "") {
+                                Client.sendMsgData(inConversationWith, messageField.text.trim())
+                                Client.addMsgToBuffer(Client.username(), inConversationWith, messageField.text.trim())
+                                messageModel.append({message: messageField.text.trim(), index : 1})
+                            }
+                        }else {
+                            Client.sendGroupMsgData(grId, messageField.text.trim())
+                            messageModel.append({message: messageField.text.trim(), index: 1})
                         }
+
                         messageField.clear()
                     }
                 }

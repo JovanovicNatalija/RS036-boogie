@@ -26,11 +26,11 @@ Page {
         }
 
         onShowContacts: {
-            contactModel.append({con:contact, index: online})
-            contactModelForGroups.append({con:contact, index: online})
+            contactModel.append({con:contact, index: online, grId: groupId})
+            contactModelForGroups.append({con:contact, index: online, grId : groupId})
         }
         onShowGroups: {
-            contactModel.append({con:contact, index:online})
+            contactModel.append({con:contact, index:online, grId : groupId})
         }
 
     }
@@ -114,7 +114,8 @@ Page {
             text: model.con
             width: listView.width - listView.leftMargin - listView.rightMargin
             onClicked: {
-                root.StackView.view.push("qrc:/qml/ConversationPage.qml", { inConversationWith: model.con })
+                    root.StackView.view.push("qrc:/qml/ConversationPage.qml", { inConversationWith: model.con, grId: grId})
+
             }
         }
     }
