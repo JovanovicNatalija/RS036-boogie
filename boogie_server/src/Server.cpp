@@ -415,7 +415,7 @@ void Server::addGroupToXml(const chatGroup& group){
 
 }
 
-void Server::createGroup(const QJsonObject& jsonResponseObject)
+void Server::createGroup(QJsonObject& jsonResponseObject)
 {
 	QJsonArray jsonMemebers = jsonResponseObject["members"].toArray();
 	QSet<QString> groupMembers;
@@ -429,8 +429,7 @@ void Server::createGroup(const QJsonObject& jsonResponseObject)
 	gr.id = m_nextGroupId;
 	m_nextGroupId++;
 	m_groups[gr.id] = gr;
-	jsonResponseObject["id"] = gr.id;
-	qDebug() << "novi id: " << gr.id;
+	jsonResponseObject.insert("groupId", gr.id);
 	for(auto member: groupMembers){
 		m_usernameToGroups[member].push_back(gr.id);
 		if(isOnline(member)){

@@ -83,7 +83,7 @@ private:
 	void createUser(const QString& pass, const QString& username);
 	void sendUnreadMessages(const QString& username, QSslSocket* socket);
 	void authentication(QJsonObject jsonResponseObject, QSslSocket* senderSocket);
-	void createGroup(const QJsonObject &jsonResponseObject);
+	void createGroup(QJsonObject &jsonResponseObject);
 
 	/*HELPER FUNCTIONS*/
 	bool userExists(const QString& username) const;
