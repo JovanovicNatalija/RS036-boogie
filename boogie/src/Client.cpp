@@ -214,8 +214,9 @@ void Client::addGroup(QJsonObject grInfos) {
     gr.members = groupMembers;
     gr.id = grInfos["groupId"].toInt();
     for(auto groups: m_groupInfos) {
-        if(groups.id == gr.id)
+        if(groups.id == gr.id){
             return;
+        }
     }
     m_groupInfos.push_back(gr);
     refreshContactsAndGroups();
@@ -394,6 +395,10 @@ void Client::removeContactFromGroupSet(QString contact) {
 }
 
 void Client::sendGroupInfos(QString groupName) {
+    if(m_contactsInGroups.count() < 2){
+        qDebug() << "Grupa ne moze biti samo sa vama u njoj......... socijalizacija pls";
+        return;
+    }
     m_contactsInGroups.insert(m_username);
     QJsonObject groupDataJson;
     QJsonArray membersArrayJson;
@@ -443,6 +448,7 @@ void Client::sendGroupMsgData(int groupId, const QString& msg) {
     jsonMessageObject.insert("type", setMessageType(MessageType::Text));
     jsonMessageObject.insert("from", m_username);
     jsonMessageObject.insert("groupId", groupId);
+    qDebug() << groupId;
     jsonMessageObject.insert("msg", msg);
     if(!jsonMessageObject.empty()) {
         QString fullMsgString = packMessage(jsonMessageObject);
