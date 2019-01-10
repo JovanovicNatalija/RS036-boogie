@@ -84,6 +84,7 @@ void Server::sslErrors(const QList<QSslError> &errors)
 }
 
 void Server::loadData(){
+	m_nextGroupId = 0;
 	QFile dataFile{DATA_FILE_PATH};
 
 	if(!dataFile.open(QIODevice::ReadWrite | QIODevice::Text)){
@@ -129,6 +130,33 @@ void Server::loadData(){
 			m_contacts[currUsername].append(contacts.at(j).toElement().text());
 		}
 	}
+	m_groupsNodeList = root.elementsByTagName("group");
+
+	for(int i = 0; i< m_groupsNodeList.count(); ++i){
+		auto currGroupNode = m_groupsNodeList.at(i);
+		auto currGroupName = currGroupNode.attributes().namedItem("groupName")
+													.nodeValue();
+		auto currGroupId = currGroupNode.firstChildElement("id").text().toInt();
+		//searching for biggest id among groups and taking +1 for next group id
+		if(currGroupId >= m_nextGroupId){
+			m_nextGroupId = currGroupId + 1;
+		}
+		auto membersList = currGroupNode.firstChildElement("members")
+										.elementsByTagName("member");
+
+		QSet<QString> members;
+		chatGroup gr;
+		gr.groupName = currGroupName;
+		gr.id = currGroupId;
+		for(int j = 0; j < membersList.count(); ++j){
+			auto member = membersList.at(j).toElement().text();
+			members.insert(member);
+			m_usernameToGroups[member].push_back(currGroupId);
+		}
+		gr.members = members;
+		members.clear();//clear it for next iteration
+	}
+
 }
 void Server::newConnection(){
 	if(this->hasPendingConnections()){
@@ -255,7 +283,7 @@ bool isNumeric(QByteArray arr){
 					   [](char c){return isdigit(c);});
 }
 
-void Server::sendContactsFor(QString username, QTcpSocket* senderSocket) const
+void Server::sendContactsFor(QString username, QTcpSocket* socket) const
 {
 	QJsonObject contactsDataJson;
 	QJsonArray contactsArrayJson;
@@ -271,7 +299,30 @@ void Server::sendContactsFor(QString username, QTcpSocket* senderSocket) const
 	contactsDataJson.insert("type", setMessageType(MessageType::Contacts));
 	contactsDataJson.insert("to",username);
 	contactsDataJson.insert("contacts", contactsArrayJson);
-	sendMessageTo(senderSocket, contactsDataJson);
+	sendMessageTo(socket, contactsDataJson);
+}
+void Server::sendGroupsFor(QString username, QTcpSocket* socket) const{
+	QJsonObject groupsDataJson;
+	QJsonArray groupsArrayJson;
+	std::transform(m_usernameToGroups[username].begin(),
+				   m_usernameToGroups[username].end(),
+				   std::back_insert_iterator<QJsonArray>(groupsArrayJson),
+				   [&](int groupId){
+						chatGroup gr = m_groups[groupId];
+						QJsonArray membersArray;
+						for(auto member : gr.members){
+							membersArray.append(member);
+						}
+						return QJsonObject({
+											{"groupId", groupId},
+											{"groupName", gr.groupName},
+											{"members", membersArray}
+										   });
+					});
+	groupsDataJson.insert("type", setMessageType(MessageType::Groups));
+	groupsDataJson.insert("to",username);
+	groupsDataJson.insert("groups", groupsArrayJson);
+	sendMessageTo(socket, groupsDataJson);
 }
 
 void Server::sendUnreadMessages(const QString& username, QTcpSocket* socket)
@@ -309,6 +360,7 @@ void Server::authentication(QJsonObject jsonResponseObject, QTcpSocket* senderSo
 		qDebug() << "AUTH FOR USER " << tmpUsername << " SUCCESSFUL";
 
 		sendContactsFor(tmpUsername, senderSocket);
+		sendGroupsFor(tmpUsername, senderSocket);
 		notifyContacts(tmpUsername, MessageType::ContactLogin);
 		if(hasUnreadMessages(tmpUsername)){
 			sendUnreadMessages(tmpUsername, senderSocket);
@@ -427,7 +479,7 @@ void Server::readMessage(){
 		gr.members = groupMembers;
 		gr.id = m_nextGroupId;
 		m_nextGroupId++;
-		m_groups.push_back(gr);
+		m_groups[gr.id] = gr;
 		jsonResponseObject["id"] = gr.id;
 		for(auto member: groupMembers){
 			if(isOnline(member)){
