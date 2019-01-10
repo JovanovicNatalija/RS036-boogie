@@ -51,7 +51,8 @@ void Client::sslErrors(const QList<QSslError> &errors)
     }
 }
 
-void Client::connectToServer(const QString& username, const QString& ip,
+
+void Client::connectToServer(const QString& ip,
                              quint16 port) {
     connectToHostEncrypted(ip, port);
 
@@ -63,12 +64,6 @@ void Client::connectToServer(const QString& username, const QString& ip,
         return;
     }
     connect(this, SIGNAL(readyRead()), this, SLOT(readMsg()));
-
-    this->m_username = username;
-
-    QDir dir(m_username);
-    if (!dir.exists())
-        QDir().mkdir(m_username);
 }
 
 void Client::disconnectFromServer() {
@@ -254,7 +249,6 @@ void Client::displayOnConvPage(const QString& inConversationWith) {
     for(auto pair: messages.value()) {
         auto type = pair.first;
         auto message = pair.second;
-        qDebug() << type;
         if(type == "text") {
             emit showMsg(std::get<0>(message), std::get<1>(message));
         } else {
@@ -464,7 +458,12 @@ void Client::sendMsgData(const QString& to,const QString& msg) {
 }
 
 //saljemo podatke za proveru username i sifre na server
-void Client::sendAuthData(QString password){
+void Client::sendAuthData(const QString& username, const QString& password){
+    this->m_username = username;
+
+    QDir dir(m_username);
+    if (!dir.exists())
+        QDir().mkdir(m_username);
     QJsonObject jsonAuthObject;
     //pravimo json objekat u koji smestamo podatke
     jsonAuthObject.insert("type", setMessageType(MessageType::Authentication));
@@ -479,4 +478,5 @@ void Client::sendAuthData(QString password){
         //qDebug() << strJson << strJson.length() << fullAuthString;
     }
 }
+
 

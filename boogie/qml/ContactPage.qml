@@ -101,6 +101,43 @@ Page {
         }
 
         delegate: ItemDelegate {
+            Connections {
+                target: Client
+                onUnreadMsg: {
+                    if(username === model.con) {
+                        if(numOfUnreadMessages === "") {
+                            numOfUnreadMessages.text = 1;
+                        } else {
+                            numOfUnreadMessages.text = (Number(numOfUnreadMessages.text) + 1).toString()
+                        }
+                    }
+                }
+
+                onShowMsg: {
+                    if(stackView.depth === 2) {
+                        if(msgFrom === model.con) {
+                            if(numOfUnreadMessages === "") {
+                                numOfUnreadMessages.text = 1;
+                            } else {
+                                numOfUnreadMessages.text = (Number(numOfUnreadMessages.text) + 1).toString()
+                            }
+                        }
+                    }
+                }
+
+                onShowPicture: {
+                    if(stackView.depth === 2) {
+                        if(msgFrom === model.con) {
+                            if(numOfUnreadMessages === "") {
+                                numOfUnreadMessages.text = 1;
+                            } else {
+                                numOfUnreadMessages.text = (Number(numOfUnreadMessages.text) + 1).toString()
+                            }
+                        }
+                    }
+                }
+            }
+
             Rectangle {
                  width: 10
                  height: width
@@ -112,9 +149,25 @@ Page {
             }
             text: model.con
             width: listView.width - listView.leftMargin - listView.rightMargin
-            onClicked: {
-                    root.StackView.view.push("qrc:/qml/ConversationPage.qml", { inConversationWith: model.con, grId: grId})
+            Rectangle {
+                visible: numOfUnreadMessages.text != ""
+                width: numOfUnreadMessages.width + 4
+                height: 15
+                color: "#BADBAD"
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                radius: 30
+                Label {
+                    id: numOfUnreadMessages
+                    color: "black"
+                    anchors.margins: 2
+                    anchors.centerIn: parent
+                }
+            }
 
+            onClicked: {
+                numOfUnreadMessages.text = ""
+                root.StackView.view.push("qrc:/qml/ConversationPage.qml", { inConversationWith: model.con, grId: grId})
             }
         }
     }

@@ -99,9 +99,9 @@ Page {
                         "qrc:/qml/ContactPage.qml",
                         { username: usernameField.text })
                     if(msgLabel.text === "") {
-                        Client.connectToServer(usernameField.text, ipField.text)
+                        Client.connectToServer(ipField.text)
                     }
-                    Client.sendAuthData(passwordField.text)
+                    Client.sendAuthData(usernameField.text, passwordField.text)
                     Client.readFromXml()
                 }
 
@@ -113,13 +113,13 @@ Page {
                              passwordField.length > 0
 					anchors.horizontalCenter: parent.horizontalCenter
 					onClicked: {
-						root.StackView.view.push(
+                        stackView.push(
 									"qrc:/qml/ContactPage.qml",
 									{ username: usernameField.text })
                         if(msgLabel.text === "") {
-                            Client.connectToServer(usernameField.text, ipField.text)
+                            Client.connectToServer(ipField.text)
                         }
-                        Client.sendAuthData(passwordField.text)
+                        Client.sendAuthData(usernameField.text, passwordField.text)
                         Client.readFromXml()
                     }
                 }

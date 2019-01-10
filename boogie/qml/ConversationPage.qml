@@ -36,6 +36,30 @@ Page {
 			font.pixelSize: 20
 			anchors.centerIn: parent
 		}
+
+        MouseArea {
+            id: notification
+            width: parent.width / 3
+            height: parent.height
+            Rectangle {
+                id: recNotification
+                width: parent.width
+                height: parent.height
+                color: "grey"
+                visible: false
+                radius: 15
+                Label {
+                    id:labelNotification
+                    anchors.centerIn: parent
+                }
+            }
+            anchors.right: parent.right
+            onClicked: {
+                labelNotification.text = ""
+                recNotification.visible = false
+                notification.enabled = false
+            }
+        }
 	}
 
 	FileDialog {
@@ -43,7 +67,7 @@ Page {
 		visible: false
 		title: "Izaberi sliku"
 		folder: shortcuts.home
-		nameFilters: ["Images files (*.jpg, *png)"]
+        nameFilters: ["Images files (*.jpg *png *.jpeg)"]
 		onAccepted: {
 			var path = fileDialog.fileUrl.toString()
 			console.log(path)
@@ -65,7 +89,13 @@ Page {
 				messageModel.append({message: msg, index : 0, image: false})
 			} else if(Client.username() === msgFrom) {
 				messageModel.append({message: msg, index : 1, image: false})
-			}
+            } else {
+                labelNotification.text = msgFrom + " : " + msg
+                recNotification.visible = true
+                notification.enabled = true
+                Client.unreadMsg(msgFrom)
+            }
+
 		}
 		onShowMsgForGroup: {
 			if(grId == groupId){
@@ -84,7 +114,12 @@ Page {
 				messageModel.append({message: path, index : 0, image: true})
 			} else if(Client.username() === msgFrom) {
 				messageModel.append({message: path, index : 1, image: true})
-			}
+            } else {
+                labelNotification.text = msgFrom + " : " + slika
+                recNotification.visible = true
+                notification.enabled = true
+                Client.unreadMsg(msgFrom)
+            }
 		}
 	}
 
