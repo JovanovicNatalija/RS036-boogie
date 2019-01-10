@@ -457,14 +457,29 @@ void Server::readMessage(){
 	}
 	//if sent data is text message, forward it only to the intended recepient
 	else if(msgType == MessageType::Text){
-		QString tmpTo = jsonResponseObject["to"].toString();
-		QString tmpFrom = jsonResponseObject["from"].toString();
-		if(isOnline(tmpTo)){
-			forwardMessage(tmpTo, jsonResponseObject);
+		if(jsonResponseObject.contains("groupId")){
+			int groupId = jsonResponseObject["groupId"].toInt();
+			auto gr = m_groups[groupId];
+			for(auto member : gr.members){
+				if(isOnline(member)){
+					forwardMessage(member, jsonResponseObject);
+				}
+				else{
+					//adding message to buffer for next time user logs in
+					m_unreadMessages[member].append(jsonResponseObject);
+				}
+			}
 		}
 		else{
-			//adding message to buffer for next time user logs in
-			m_unreadMessages[tmpTo].append(jsonResponseObject);
+			QString tmpTo = jsonResponseObject["to"].toString();
+			QString tmpFrom = jsonResponseObject["from"].toString();
+			if(isOnline(tmpTo)){
+				forwardMessage(tmpTo, jsonResponseObject);
+			}
+			else{
+				//adding message to buffer for next time user logs in
+				m_unreadMessages[tmpTo].append(jsonResponseObject);
+			}
 		}
 	}
 	else if(msgType == MessageType::CreateGroup){
