@@ -70,10 +70,10 @@ Page {
 		onShowMsgForGroup: {
 			if(grId == groupId){
 				if(Client.username() === msgFrom){
-					messageModel.append({message: msgFrom + ":\n" + msg, index : 1})
+                    messageModel.append({message: msgFrom + ":\n" + msg, index : 1, image: false})
 				}
 				else {
-					messageModel.append({message: msgFrom + ":\n" + msg, index : 0})
+                    messageModel.append({message: msgFrom + ":\n" + msg, index : 0, image: false})
 				}
 			}
 		}

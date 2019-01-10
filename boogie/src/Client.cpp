@@ -213,6 +213,10 @@ void Client::addGroup(QJsonObject grInfos) {
     gr.groupName = grInfos["groupName"].toString();
     gr.members = groupMembers;
     gr.id = grInfos["groupId"].toInt();
+    for(auto groups: m_groupInfos) {
+        if(groups.id == gr.id)
+            return;
+    }
     m_groupInfos.push_back(gr);
     refreshContactsAndGroups();
 }
