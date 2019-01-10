@@ -155,6 +155,8 @@ void Server::loadData(){
 		}
 		gr.members = members;
 		members.clear();//clear it for next iteration
+		qDebug() << "grupa " << gr.groupName << " ima id " << gr.id << "i clanove " << gr.members;
+		m_groups[currGroupId] = gr;
 	}
 
 }
@@ -309,6 +311,7 @@ void Server::sendGroupsFor(QString username, QTcpSocket* socket) const{
 				   std::back_insert_iterator<QJsonArray>(groupsArrayJson),
 				   [&](int groupId){
 						chatGroup gr = m_groups[groupId];
+						qDebug() << "grupa " << gr.groupName << " ima id " << gr.id << "i clanove " << gr.members;
 						QJsonArray membersArray;
 						for(auto member : gr.members){
 							membersArray.append(member);
@@ -457,14 +460,29 @@ void Server::readMessage(){
 	}
 	//if sent data is text message, forward it only to the intended recepient
 	else if(msgType == MessageType::Text){
-		QString tmpTo = jsonResponseObject["to"].toString();
-		QString tmpFrom = jsonResponseObject["from"].toString();
-		if(isOnline(tmpTo)){
-			forwardMessage(tmpTo, jsonResponseObject);
+		if(jsonResponseObject.contains("groupId")){
+			int groupId = jsonResponseObject["groupId"].toInt();
+			auto gr = m_groups[groupId];
+			for(auto member : gr.members){
+				if(isOnline(member)){
+					forwardMessage(member, jsonResponseObject);
+				}
+				else{
+					//adding message to buffer for next time user logs in
+					m_unreadMessages[member].append(jsonResponseObject);
+				}
+			}
 		}
 		else{
-			//adding message to buffer for next time user logs in
-			m_unreadMessages[tmpTo].append(jsonResponseObject);
+			QString tmpTo = jsonResponseObject["to"].toString();
+			QString tmpFrom = jsonResponseObject["from"].toString();
+			if(isOnline(tmpTo)){
+				forwardMessage(tmpTo, jsonResponseObject);
+			}
+			else{
+				//adding message to buffer for next time user logs in
+				m_unreadMessages[tmpTo].append(jsonResponseObject);
+			}
 		}
 	}
 	else if(msgType == MessageType::CreateGroup){
