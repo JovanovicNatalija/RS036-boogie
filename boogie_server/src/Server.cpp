@@ -155,6 +155,8 @@ void Server::loadData(){
 		}
 		gr.members = members;
 		members.clear();//clear it for next iteration
+		qDebug() << "grupa " << gr.groupName << " ima id " << gr.id << "i clanove " << gr.members;
+		m_groups[currGroupId] = gr;
 	}
 
 }
@@ -309,6 +311,7 @@ void Server::sendGroupsFor(QString username, QTcpSocket* socket) const{
 				   std::back_insert_iterator<QJsonArray>(groupsArrayJson),
 				   [&](int groupId){
 						chatGroup gr = m_groups[groupId];
+						qDebug() << "grupa " << gr.groupName << " ima id " << gr.id << "i clanove " << gr.members;
 						QJsonArray membersArray;
 						for(auto member : gr.members){
 							membersArray.append(member);
