@@ -72,9 +72,16 @@ void Client::addNewContact(const QString& name, bool online) {
 
     if(m_contactInfos[name] != true)
         m_contactInfos[name] = online;
+    refreshContactsAndGroups();
+}
+
+void Client::refreshContactsAndGroups() {
     emit clearContacts();
     for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
         emit showContacts(i.key(), i.value());
+    }
+    for(auto group : m_groupInfos) {
+        emit showContacts(group.groupName, true);
     }
 }
 
@@ -106,25 +113,15 @@ void Client::readMsg() {
             m_contactInfos[jsonObj["contact"].toString()] = jsonObj["online"].toBool();
             //emit showContacts(jsonObj["contact"].toString(), jsonObj["online"].toBool());
 		}
-
-        for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
-            emit showContacts(i.key(), i.value());
-        }
+        refreshContactsAndGroups();
 	}
 	else if(msgType == MessageType::ContactLogin){
         m_contactInfos[jsonMsgObj["contact"].toString()] = true;
-        emit clearContacts();
-        for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
-            emit showContacts(i.key(), i.value());
-        }
-
+        refreshContactsAndGroups();
 	}
 	else if(msgType == MessageType::ContactLogout){
         m_contactInfos[jsonMsgObj["contact"].toString()] = false;
-        emit clearContacts();
-        for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
-            emit showContacts(i.key(), i.value());
-        }
+        refreshContactsAndGroups();
 	}
 	else if(msgType == MessageType::AddNewContact) {
         if(jsonMsgObj["exists"].toBool() == true)
@@ -132,6 +129,19 @@ void Client::readMsg() {
         else {
             emit badContact(QString("Trazeni kontakt ne postoji!"));
         }
+    }
+    else if(msgType == MessageType::CreateGroup) {
+        QJsonArray membersJsonArray = jsonMsgObj["members"].toArray();
+        QSet<QString> groupMembers;
+        for(auto member: membersJsonArray){
+            groupMembers.insert(member.toVariant().toString());
+        }
+        chatGroup gr;
+        gr.groupName = jsonMsgObj["groupName"].toString();
+        gr.members = groupMembers;
+        gr.id = jsonMsgObj["id"].toInt();
+        m_groupInfos.push_back(gr);
+        refreshContactsAndGroups();
     }
 	else if(msgType == MessageType::BadPass){
         emit badPass();
@@ -294,23 +304,23 @@ void Client::checkNewContact(const QString& name) {
 }
 
 void Client::addContactToGroupSet(QString contact) {
-    if(!contactsInGropus.contains(contact)){
-        contactsInGropus.insert(contact);
+    if(!m_contactsInGroups.contains(contact)){
+        m_contactsInGroups.insert(contact);
     }
 }
 
 void Client::removeContactFromGroupSet(QString contact) {
-    if(contactsInGropus.contains(contact)){
-        contactsInGropus.remove(contact);
+    if(m_contactsInGroups.contains(contact)){
+        m_contactsInGroups.remove(contact);
     }
 }
 
 void Client::sendGroupInfos(QString groupName) {
-	contactsInGropus.insert(m_username);
+    m_contactsInGroups.insert(m_username);
     QJsonObject groupDataJson;
     QJsonArray membersArrayJson;
-    std::copy(contactsInGropus.begin(),
-                   contactsInGropus.end(),
+    std::copy(m_contactsInGroups.begin(),
+                   m_contactsInGroups.end(),
                    std::back_insert_iterator<QJsonArray>(membersArrayJson));
     groupDataJson.insert("type", setMessageType(MessageType::CreateGroup));
 	groupDataJson.insert("members", membersArrayJson);
@@ -319,14 +329,11 @@ void Client::sendGroupInfos(QString groupName) {
         QString fullMsgString = packMessage(groupDataJson);
         sendMsg(fullMsgString);
     }
-    emit clearContacts();
-    for(auto i = m_contactInfos.cbegin(); i != m_contactInfos.cend(); i++){
-        emit showContacts(i.key(), i.value());
-    }
+    refreshContactsAndGroups();
 }
 
 void Client::clearGroupSet() {
-    contactsInGropus.clear();
+    m_contactsInGroups.clear();
 }
 void Client::sendPicture(const QString& filePath)  {
     qDebug() << filePath;
