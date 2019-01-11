@@ -74,11 +74,11 @@ Page {
             if(grId == -1) {
                 Client.sendPicture(inConversationWith, path)
                 Client.addMsgToBuffer(false, Client.username(), inConversationWith, path, "image")
-                messageModel.append({image: true, message: path, index: 1})
+                messageModel.append({from: "", image: true, message: path, index: 1})
             } else {
                 Client.sendGroupPictureData(grId, path)
                 Client.addMsgToBuffer(true, Client.username(), grId.toString(), path, "image")
-                messageModel.append({index: 1, message: path, image: true})
+                messageModel.append({from: "", index: 1, message: path, image: true})
             }
 		}
 	}
@@ -96,7 +96,7 @@ Page {
 			} else if(Client.username() === msgFrom) {
 				messageModel.append({message: msg, index : 1, image: false})
             } else {
-                labelNotification.text = msgFrom + " : " + msg
+                labelNotification.text = "Nova poruka od:\n" + msgFrom
                 recNotification.visible = true
                 notification.enabled = true
                 Client.unreadMsg(msgFrom)
@@ -109,13 +109,13 @@ Page {
                     messageModel.append({message: msg, index : 1, image: false})
                 } else {
                     messageModel.append({message: msgFrom + ":\n" + msg, index : 0, image: false})
-                    // TODO: POPRAVI OVO DA SE SALJE I IME GRUPE
-                    // labelNotification.text = msgFrom + " : " + msg
-                    // recNotification.visible = true
-                    // notification.enabled = true
-                    // Client.unreadMsg(msgFrom)
                 }
-			}
+            } else {
+                labelNotification.text = "Nova poruka od:\n" + Client.groupNameFromId(groupId)
+                recNotification.visible = true
+                notification.enabled = true
+                Client.unreadMsg(Client.groupNameFromId(groupId))
+            }
 		}
 
 		onShowPicture: {
@@ -124,7 +124,7 @@ Page {
 			} else if(Client.username() === msgFrom) {
                 messageModel.append({from: "", message: path, index : 1, image: true})
             } else {
-                labelNotification.text = msgFrom + " : " + slika
+                labelNotification.text = "Nova poruka od:\n" + msgFrom
                 recNotification.visible = true
                 notification.enabled = true
                 Client.unreadMsg(msgFrom)
@@ -138,12 +138,12 @@ Page {
                 } else {
                     messageModel.append({from: msgFrom + ":", message: path, index : 0, image: true})
                     console.log(msgFrom)
-                    // TODO!
-                    // labelNotification.text = msgFrom + " : " + slika
-                    // recNotification.visible = true
-                    // notification.enabled = true
-                    // Client.unreadMsg(msgFrom)
                 }
+            } else {
+                labelNotification.text = "Nova poruka od:\n" + Client.groupNameFromId(groupId)
+                recNotification.visible = true
+                notification.enabled = true
+                Client.unreadMsg(Client.groupNameFromId(groupId))
             }
         }
 	}
