@@ -127,7 +127,10 @@ Page {
         modal: true
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
-        onClosed: Client.clearGroupSet()
+        onClosed: {
+            Client.clearGroupSet()
+
+        }
         ListModel{
             id: contactModelForGroups
         }
@@ -148,6 +151,7 @@ Page {
                     id: groupNameField
                     placeholderText: qsTr("Naziv grupe")
                     selectByMouse: true
+                    onVisibleChanged: groupNameField.clear()
             }
                 Button {
                     id: confirmGroupButton
