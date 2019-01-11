@@ -58,7 +58,9 @@ Page {
 					}
 					TextField {
 						id: ipField
-						placeholderText: qsTr("localhost")
+						//placeholderText: qsTr("localhost")
+						text: "localhost"
+						readOnly: true
 						selectByMouse: true
 					}
 					Label{

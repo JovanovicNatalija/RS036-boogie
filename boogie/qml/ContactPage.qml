@@ -180,7 +180,7 @@ Page {
             Rectangle {
                  width: 10
                  height: width
-                 color: { index ? "green" : "red" }
+				 color: { grId != -1 ? "navy" : (index ? "green" : "red" )}
                  border.color: "black"
                  border.width: 1
                  radius: width*0.5
