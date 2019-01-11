@@ -546,4 +546,13 @@ void Client::sendAuthData(const QString& username, const QString& password){
     }
 }
 
+QString Client::groupNameFromId(int id) {
+    for(auto group: m_groupInfos) {
+        if(group.id == id)
+            return group.groupName;
+    }
+    return "";
+}
+
+
 

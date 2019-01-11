@@ -45,6 +45,7 @@ public:
     Q_INVOKABLE void sendGroupMsgData(int groupId, const QString& msg);
     Q_INVOKABLE void sendGroupPictureData(int groupId, const QString& filePath);
     Q_INVOKABLE QString username();
+    Q_INVOKABLE QString groupNameFromId(int id);
     void createXml() const;
 
 signals:
@@ -60,7 +61,6 @@ signals:
     void badContact(const QString& msg);
     void tooFewPeople(const QString& msg);
     Q_INVOKABLE int unreadMsg(const QString& username);
-
 
 public slots:
     void readMsg();
