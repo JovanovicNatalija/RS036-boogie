@@ -17,6 +17,7 @@ Page {
 
 	Component.onCompleted: {
 		Client.displayOnConvPage(inConversationWith)
+        Client.displayOnConvPage(grId.toString())
 	}
 
 	header: ToolBar {
@@ -70,10 +71,15 @@ Page {
         nameFilters: ["Images files (*.jpg *png *.jpeg)"]
 		onAccepted: {
 			var path = fileDialog.fileUrl.toString()
-			console.log(path)
-			Client.sendPicture(inConversationWith, path)
-			Client.addMsgToBuffer(Client.username(), inConversationWith, path, "image")
-			messageModel.append({image: true,message: path, index: 1})
+            if(grId == -1) {
+                Client.sendPicture(inConversationWith, path)
+                Client.addMsgToBuffer(false, Client.username(), inConversationWith, path, "image")
+                messageModel.append({image: true, message: path, index: 1})
+            } else {
+                Client.sendGroupPictureData(grId, path)
+                Client.addMsgToBuffer(true, Client.username(), grId.toString(), path, "image")
+                messageModel.append({index: 1, message: path, image: true})
+            }
 		}
 	}
 
@@ -99,21 +105,24 @@ Page {
 		}
 		onShowMsgForGroup: {
 			if(grId == groupId){
-				if(Client.username() === msgFrom){
-                    messageModel.append({message: msgFrom + ":\n" + msg, index : 1, image: false})
-				}
-				else {
+               if(Client.username() === msgFrom) {
+                    messageModel.append({message: msg, index : 1, image: false})
+                } else {
                     messageModel.append({message: msgFrom + ":\n" + msg, index : 0, image: false})
-				}
+                    // TODO: POPRAVI OVO DA SE SALJE I IME GRUPE
+                    // labelNotification.text = msgFrom + " : " + msg
+                    // recNotification.visible = true
+                    // notification.enabled = true
+                    // Client.unreadMsg(msgFrom)
+                }
 			}
 		}
 
 		onShowPicture: {
-			console.log(path)
 			if(inConversationWith === msgFrom) {
-				messageModel.append({message: path, index : 0, image: true})
+                messageModel.append({from: "", message: path, index : 0, image: true})
 			} else if(Client.username() === msgFrom) {
-				messageModel.append({message: path, index : 1, image: true})
+                messageModel.append({from: "", message: path, index : 1, image: true})
             } else {
                 labelNotification.text = msgFrom + " : " + slika
                 recNotification.visible = true
@@ -121,6 +130,22 @@ Page {
                 Client.unreadMsg(msgFrom)
             }
 		}
+
+        onShowPictureForGroup: {
+            if(grId == groupId) {
+                if(Client.username() === msgFrom) {
+                    messageModel.append({from: "", message: path, index : 1, image: true})
+                } else {
+                    messageModel.append({from: msgFrom + ":", message: path, index : 0, image: true})
+                    console.log(msgFrom)
+                    // TODO!
+                    // labelNotification.text = msgFrom + " : " + slika
+                    // recNotification.visible = true
+                    // notification.enabled = true
+                    // Client.unreadMsg(msgFrom)
+                }
+            }
+        }
 	}
 
 	ColumnLayout {
@@ -170,12 +195,25 @@ Page {
 
 				Component {
 					id: imageMsg
-					Image {
-						width: sourceSize.width * 0.3
-						height: sourceSize.height * 0.3
-						source: model.message
-						fillMode: Image.PreserveAspectFit
-					}
+                    Rectangle {
+                        color: "#808080"
+                        width: image.width
+                        height: image.height + (fromLabel.text == "" ? 0 : fromLabel.height + 10)
+                        Label {
+                            color: "black"
+                            id: fromLabel
+                            text: model.from
+                        }
+
+                        Image {
+                            id:image
+                            width: sourceSize.width * 0.3
+                            height: sourceSize.height * 0.3
+                            source: model.message
+                            fillMode: Image.PreserveAspectFit
+                            anchors.bottom: parent.bottom
+                        }
+                    }
 				}
 
 			}
@@ -205,13 +243,16 @@ Page {
 						if(grId == -1){
 							if(messageField.text.trim() !== "") {
 								Client.sendMsgData(inConversationWith, messageField.text.trim())
-								Client.addMsgToBuffer(Client.username(), inConversationWith, messageField.text.trim(), "text")
+                                Client.addMsgToBuffer(false, Client.username(), inConversationWith, messageField.text.trim(), "text")
 								messageModel.append({message: messageField.text.trim(), index : 1, image : false})
 							}
 						}else {
-							Client.sendGroupMsgData(grId, messageField.text.trim())
-							messageModel.append({message: messageField.text.trim(), index: 1, image: false})
-						}
+                            if(messageField.text.trim() !== "") {
+                                Client.sendGroupMsgData(grId, messageField.text.trim())
+                                Client.addMsgToBuffer(true, Client.username(), grId.toString(), messageField.text.trim(), "text")
+                                messageModel.append({message: messageField.text.trim(), index: 1, image: false})
+                            }
+                        }
 
 						messageField.clear()
 					}
@@ -226,12 +267,15 @@ Page {
 						if(grId == -1){
 							if(messageField.text.trim() !== "") {
 								Client.sendMsgData(inConversationWith, messageField.text.trim())
-								Client.addMsgToBuffer(Client.username(), inConversationWith, messageField.text.trim(), "text")
+                                Client.addMsgToBuffer(falsem, Client.username(), inConversationWith, messageField.text.trim(), "text")
 								messageModel.append({message: messageField.text.trim(), index : 1, image: false})
 							}
 						}else {
-							Client.sendGroupMsgData(grId, messageField.text.trim())
-							messageModel.append({message: messageField.text.trim(), index: 1, image:false})
+                            if(messageField.text.trim() !== "") {
+                                Client.sendGroupMsgData(grId, messageField.text.trim())
+                                Client.addMsgToBuffer(true, Client.username(), grId.toString(), messageField.text.trim(), "text")
+                                messageModel.append({message: messageField.text.trim(), index: 1, image:false})
+                             }
 						}
 
 						messageField.clear()

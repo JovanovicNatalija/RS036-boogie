@@ -224,12 +224,9 @@ Page {
                     checked: false
                     text: model.con
                     width: listView.width - listView.leftMargin - listView.rightMargin
-                    onClicked: {
-                    }
                     onCheckedChanged: {
-                        if(a.checked){
+                        if(a.checked)
                             Client.addContactToGroupSet(a.text)
-                        }
                         else
                             Client.removeContactFromGroupSet(a.text)
                     }
