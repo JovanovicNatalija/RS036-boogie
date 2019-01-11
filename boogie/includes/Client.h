@@ -58,6 +58,7 @@ signals:
     void badPass();
     void alreadyLogIn();
     void badContact(const QString& msg);
+    void tooFewPeople(const QString& msg);
     Q_INVOKABLE int unreadMsg(const QString& username);
 
 

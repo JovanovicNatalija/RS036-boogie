@@ -1,3 +1,5 @@
+//basic idea for this page taken from https://doc.qt.io/qt-5/qtquickcontrols-chattutorial-example.html
+
 import QtQuick 2.6
 import QtQuick.Controls 2.1
 import QtQuick.Layouts 1.3
@@ -68,33 +70,46 @@ Page {
                     onClicked: {
                         Client.checkNewContact(newContactField.text)
                         newContactField.clear()
+                        msgLabel.visible = false
                     }
-                }
-
-                Label{
-                    id: msgLabel
-                    font.pixelSize: 14
-                    color: "red"
                 }
 
                 Connections {
                     target: Client
                     onBadContact: {
                         msgLabel.text = msg
+                        msgLabel.visible = true
+                    }
+                    onTooFewPeople: {
+                        msgLabel.text = msg
+                        msgLabel.visible = true
                     }
                 }
 
                 Keys.onReturnPressed: {
                     Client.checkNewContact(newContactField.text)
                     newContactField.clear()
+                    msgLabel.visible = false
                 }
             }
             RowLayout{
                 Button {
                     id: createGroupButton
                     text: qsTr("Napravi novu grupu")
-                    onClicked: groupPopup.open()
+                    onClicked: {
+                        groupPopup.open()
+                        msgLabel.visible = false;
+                    }
 
+                }
+                Keys.onReturnPressed: {
+                    groupPopup.open()
+                    msgLabel.visible = false;
+                }
+                Label{
+                    id: msgLabel
+                    font.pixelSize: 14
+                    color: "red"
                 }
 
             }

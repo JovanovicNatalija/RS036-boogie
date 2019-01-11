@@ -427,6 +427,7 @@ void Client::removeContactFromGroupSet(QString contact) {
 void Client::sendGroupInfos(QString groupName) {
     if(m_contactsInGroups.count() < 2){
         qDebug() << "Grupa ne moze biti samo sa vama u njoj......... socijalizacija pls";
+        emit tooFewPeople(QString("Za grupu su potrebna bar 3 korisnika"));
         return;
     }
     m_contactsInGroups.insert(m_username);

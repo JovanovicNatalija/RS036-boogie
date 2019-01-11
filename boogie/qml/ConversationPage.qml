@@ -1,3 +1,4 @@
+//basic idea for this page taken from https://doc.qt.io/qt-5/qtquickcontrols-chattutorial-example.html
 import QtQuick 2.10
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
