@@ -61,7 +61,16 @@ Page {
 						placeholderText: qsTr("localhost")
 						selectByMouse: true
 					}
-
+					Label{
+						id:portLabel
+						text: qsTr("Port servera: ")
+						font.pixelSize: 14
+					}
+					TextField {
+						id: portField
+						text: qsTr("10000")
+						selectByMouse: true
+					}
 					Label{
 						id: usernameLabel
 						text: qsTr("Korisničko ime:")
@@ -95,14 +104,21 @@ Page {
                 }
 
                 Keys.onReturnPressed: {
-                    root.StackView.view.push(
-                        "qrc:/qml/ContactPage.qml",
-                        { username: usernameField.text })
-                    if(msgLabel.text === "") {
-                        Client.connectToServer(ipField.text)
+
+					if( ipField.length > 0 &&
+						usernameField.length > 0 &&
+						portField.length > 0 &&
+						parseInt(portField.text) > 1024 &&
+						passwordField.length > 0) {
+
+						root.StackView.view.push(
+							"qrc:/qml/ContactPage.qml",
+							{ username: usernameField.text })
+						Client.connectToServer(ipField.text,parseInt(portField.text))
+						Client.sendAuthData(usernameField.text, passwordField.text)
+						Client.readFromXml()
                     }
-                    Client.sendAuthData(usernameField.text, passwordField.text)
-                    Client.readFromXml()
+
                 }
 
 				Button {
@@ -110,6 +126,8 @@ Page {
                     text: qsTr("Potvrdi")
 					enabled: ipField.length > 0 &&
                              usernameField.length > 0 &&
+							 portField.length > 0 &&
+							 parseInt(portField.text) > 1024 &&
                              passwordField.length > 0
 					anchors.horizontalCenter: parent.horizontalCenter
 					onClicked: {
@@ -117,7 +135,7 @@ Page {
 									"qrc:/qml/ContactPage.qml",
 									{ username: usernameField.text })
                         if(msgLabel.text === "") {
-                            Client.connectToServer(ipField.text)
+							Client.connectToServer(ipField.text, parseInt(portField.text))
                         }
                         Client.sendAuthData(usernameField.text, passwordField.text)
                         Client.readFromXml()

@@ -447,6 +447,7 @@ void Client::sendGroupInfos(QString groupName) {
 
 void Client::clearGroupSet() {
     m_contactsInGroups.clear();
+    refreshContactsAndGroups();
 }
 
 void Client::sendPicture(const QString& to, const QString& filePath) {
