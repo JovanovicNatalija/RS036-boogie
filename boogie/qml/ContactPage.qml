@@ -136,6 +136,30 @@ Page {
                         }
                     }
                 }
+
+                onShowPictureForGroup: {
+                    if(stackView.depth === 2) {
+                        if(Client.groupNameFromId(groupId) === model.con) {
+                            if(numOfUnreadMessages === "") {
+                                numOfUnreadMessages.text = 1;
+                            } else {
+                                numOfUnreadMessages.text = (Number(numOfUnreadMessages.text) + 1).toString()
+                            }
+                        }
+                    }
+                }
+
+                onShowMsgForGroup: {
+                    if(stackView.depth === 2) {
+                        if(Client.groupNameFromId(groupId) === model.con) {
+                            if(numOfUnreadMessages === "") {
+                                numOfUnreadMessages.text = 1;
+                            } else {
+                                numOfUnreadMessages.text = (Number(numOfUnreadMessages.text) + 1).toString()
+                            }
+                        }
+                    }
+                }
             }
 
             Rectangle {
@@ -182,7 +206,6 @@ Page {
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
         onClosed: {
             Client.clearGroupSet()
-
         }
         ListModel{
             id: contactModelForGroups
