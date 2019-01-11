@@ -19,11 +19,10 @@ class Client : public QSslSocket
     Q_OBJECT
 public:
     Client(QObject* parent = nullptr);
-    Q_INVOKABLE void connectToServer(const QString& username,
-                                     const QString& ip,
+    Q_INVOKABLE void connectToServer(const QString& ip,
                                      quint16 port = 10000);
     Q_INVOKABLE void sendMsg(const QString& str);
-    Q_INVOKABLE void sendAuthData(QString password);
+    Q_INVOKABLE void sendAuthData(const QString& username,const QString& password);
     Q_INVOKABLE void sendMsgData(const QString& to,const QString& msg);
     Q_INVOKABLE void addMsgToBuffer(const QString& sender,
                                     const QString& inConversationWith,
@@ -56,6 +55,8 @@ signals:
     void badPass();
     void alreadyLogIn();
     void badContact(const QString& msg);
+    Q_INVOKABLE int unreadMsg(const QString& username);
+
 
 public slots:
     void readMsg();
