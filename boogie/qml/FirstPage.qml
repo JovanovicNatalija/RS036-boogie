@@ -35,7 +35,6 @@ Page {
                     Connections {
                         target: Client
                         onBadPass: {
-                            ipField.clear()
                             usernameField.clear()
                             passwordField.clear()
                             root.StackView.view.pop();
@@ -43,7 +42,6 @@ Page {
                         }
 
                         onAlreadyLogIn: {
-                            ipField.clear()
                             usernameField.clear()
                             passwordField.clear()
                             root.StackView.view.pop();
@@ -58,11 +56,11 @@ Page {
 					}
 					TextField {
 						id: ipField
-						//placeholderText: qsTr("localhost")
 						text: "localhost"
 						readOnly: true
 						selectByMouse: true
 					}
+
 					Label{
 						id:portLabel
 						text: qsTr("Port servera: ")
@@ -73,6 +71,7 @@ Page {
 						text: qsTr("10000")
 						selectByMouse: true
 					}
+
 					Label{
 						id: usernameLabel
 						text: qsTr("Korisničko ime:")

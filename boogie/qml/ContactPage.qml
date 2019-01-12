@@ -31,6 +31,7 @@ Page {
             contactModel.append({con:contact, index: online, grId: groupId})
             contactModelForGroups.append({con:contact, index: online, grId : groupId})
         }
+
         onShowGroups: {
             contactModel.append({con:contact, index:online, grId : groupId})
         }
@@ -39,8 +40,8 @@ Page {
 
     ListView{
         width: parent.width
-        layoutDirection: Qt.RightToLeft
-        cacheBuffer: 316
+        //layoutDirection: Qt.RightToLeft
+        //cacheBuffer: 316
         id: listView
         anchors.fill: parent
         topMargin: 48
@@ -63,20 +64,20 @@ Page {
 					placeholderText: qsTr("Korisničko ime")
                     selectByMouse: true
                 }
+
                 Button {
                     id: addContactButton
                     text: qsTr("Dodaj novi kontakt")
                     enabled: newContactField.length > 0
                     onClicked: {
                         if(newContactField.text.toString() === Client.username()){
-                            msgLabel.text = "Ne mozete dodati sami sebe"
+                            msgLabel.text = "Ne možete pričati sami sa sobom, \n nije socijalno prihvatljivo :)"
                             msgLabel.visible = true
-                            newContactField.clear()
                         }else {
                             Client.checkNewContact(newContactField.text)
-                            newContactField.clear()
                             msgLabel.visible = false
                         }
+                        newContactField.clear()
                     }
                 }
 
@@ -94,16 +95,16 @@ Page {
 
                 Keys.onReturnPressed: {
                     if(newContactField.text.toString() === Client.username()){
-                        msgLabel.text = "Ne mozete dodati sami sebe"
+                        msgLabel.text = "Ne možete pričati sami sa sobom, \n nije socijalno prihvatljivo :)"
                         msgLabel.visible = true
-                        newContactField.clear()
                     }else {
                         Client.checkNewContact(newContactField.text)
-                        newContactField.clear()
                         msgLabel.visible = false
                     }
+                    newContactField.clear()
                 }
             }
+
             RowLayout{
                 Button {
                     id: createGroupButton
@@ -231,12 +232,15 @@ Page {
         modal: true
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+
         onClosed: {
             Client.clearGroupSet()
         }
+
         ListModel{
             id: contactModelForGroups
         }
+
         ListView{
             width: parent.width
             layoutDirection: Qt.RightToLeft
@@ -255,7 +259,7 @@ Page {
                     placeholderText: qsTr("Naziv grupe")
                     selectByMouse: true
                     onVisibleChanged: groupNameField.clear()
-            }
+                }
                 Button {
                     id: confirmGroupButton
                     text: qsTr("Napravi grupu")
@@ -274,15 +278,15 @@ Page {
             }
             delegate: ItemDelegate {
                 CheckBox {
-                    id: a
+                    id: contact
                     checked: false
                     text: model.con
                     width: listView.width - listView.leftMargin - listView.rightMargin
                     onCheckedChanged: {
-                        if(a.checked)
-                            Client.addContactToGroupSet(a.text)
+                        if(contact.checked)
+                            Client.addContactToGroupSet(contact.text)
                         else
-                            Client.removeContactFromGroupSet(a.text)
+                            Client.removeContactFromGroupSet(contact.text)
                     }
                 }
             }

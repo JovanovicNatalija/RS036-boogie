@@ -1,4 +1,5 @@
 //basic idea for this page taken from https://doc.qt.io/qt-5/qtquickcontrols-chattutorial-example.html
+
 import QtQuick 2.10
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
@@ -17,8 +18,12 @@ Page {
 	property int grId
 
 	Component.onCompleted: {
-		Client.displayOnConvPage(inConversationWith)
-        Client.displayOnConvPage(grId.toString())
+        if(grId != -1) {
+            Client.displayOnConvPage(grId.toString())
+        } else {
+            Client.displayOnConvPage(inConversationWith)
+        }
+
 	}
 
 	header: ToolBar {
@@ -55,7 +60,9 @@ Page {
                     anchors.centerIn: parent
                 }
             }
+
             anchors.right: parent.right
+
             onClicked: {
                 labelNotification.text = ""
                 recNotification.visible = false
@@ -75,12 +82,12 @@ Page {
             if(grId == -1) {
                 Client.sendPicture(inConversationWith, path)
                 Client.addMsgToBuffer(false, Client.username(), inConversationWith, path, "image")
-                messageModel.append({from: "", image: true, message: path, index: 1})
             } else {
                 Client.sendGroupPictureData(grId, path)
                 Client.addMsgToBuffer(true, Client.username(), grId.toString(), path, "image")
-                messageModel.append({from: "", index: 1, message: path, image: true})
             }
+            messageModel.append({from: "", index: 1, message: path, image: true})
+
 		}
 	}
 
@@ -91,7 +98,6 @@ Page {
 	Connections {
 		target: Client
 		onShowMsg: {
-			console.log(msg)
 			if(inConversationWith === msgFrom) {
 				messageModel.append({message: msg, index : 0, image: false})
 			} else if(Client.username() === msgFrom) {
@@ -138,7 +144,6 @@ Page {
                     messageModel.append({from: "", message: path, index : 1, image: true})
                 } else {
                     messageModel.append({from: msgFrom + ":", message: path, index : 0, image: true})
-                    console.log(msgFrom)
                 }
             } else {
                 labelNotification.text = "Nova poruka od:\n" + Client.groupNameFromId(groupId)
@@ -178,7 +183,6 @@ Page {
 						Label {
 							id: lblMsg
 							text: model.message
-							//used to get text width in pixels
 							TextMetrics {
 							id: textMetrics
 							font: lblMsg.font
@@ -245,15 +249,16 @@ Page {
 							if(messageField.text.trim() !== "") {
 								Client.sendMsgData(inConversationWith, messageField.text.trim())
                                 Client.addMsgToBuffer(false, Client.username(), inConversationWith, messageField.text.trim(), "text")
-								messageModel.append({message: messageField.text.trim(), index : 1, image : false})
-							}
+                                messageModel.append({message: messageField.text.trim(), index : 1, image : false})
+                            }
 						}else {
                             if(messageField.text.trim() !== "") {
                                 Client.sendGroupMsgData(grId, messageField.text.trim())
                                 Client.addMsgToBuffer(true, Client.username(), grId.toString(), messageField.text.trim(), "text")
-                                messageModel.append({message: messageField.text.trim(), index: 1, image: false})
+                                messageModel.append({message: messageField.text.trim(), index : 1, image : false})
                             }
                         }
+
 
 						messageField.clear()
 					}
@@ -269,15 +274,16 @@ Page {
 							if(messageField.text.trim() !== "") {
 								Client.sendMsgData(inConversationWith, messageField.text.trim())
                                 Client.addMsgToBuffer(falsem, Client.username(), inConversationWith, messageField.text.trim(), "text")
-								messageModel.append({message: messageField.text.trim(), index : 1, image: false})
-							}
-						}else {
+                                messageModel.append({message: messageField.text.trim(), index : 1, image: false})
+                            }
+                        } else {
                             if(messageField.text.trim() !== "") {
                                 Client.sendGroupMsgData(grId, messageField.text.trim())
                                 Client.addMsgToBuffer(true, Client.username(), grId.toString(), messageField.text.trim(), "text")
-                                messageModel.append({message: messageField.text.trim(), index: 1, image:false})
-                             }
+                                messageModel.append({message: messageField.text.trim(), index : 1, image: false})
+                            }
 						}
+
 
 						messageField.clear()
 					}

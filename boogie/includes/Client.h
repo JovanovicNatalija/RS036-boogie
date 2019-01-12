@@ -36,17 +36,23 @@ public:
     Q_INVOKABLE void checkNewContact(const QString& name);
     Q_INVOKABLE void sendPicture(const QString& to, const QString& filePath);
     Q_INVOKABLE void disconnectFromServer();
-    Q_INVOKABLE void addContactToGroupSet(QString contact);
-    Q_INVOKABLE void removeContactFromGroupSet(QString contact);
-    Q_INVOKABLE void sendGroupInfos(QString groupName);
+    Q_INVOKABLE void addContactToGroupSet(const QString& contact);
+    Q_INVOKABLE void removeContactFromGroupSet(const QString& contact);
+    Q_INVOKABLE void sendGroupInfos(const QString& groupName);
     Q_INVOKABLE void clearGroupSet();
     Q_INVOKABLE void refreshContactsAndGroups();
-    Q_INVOKABLE void addGroup(QJsonObject grInfos);
+    Q_INVOKABLE void addGroup(const QJsonObject& grInfos);
     Q_INVOKABLE void sendGroupMsgData(int groupId, const QString& msg);
     Q_INVOKABLE void sendGroupPictureData(int groupId, const QString& filePath);
     Q_INVOKABLE QString username();
     Q_INVOKABLE QString groupNameFromId(int id);
     void createXml() const;
+
+    template <typename T>
+    void sendImage(bool group, T to, const QString& filePath);
+
+    template <typename T>
+    void sendMessage(bool group, T to, const QString& msg);
 
 signals:
     void showPicture(const QString& msgFrom, const QString& path);
@@ -68,6 +74,7 @@ public slots:
 
 private:
     QString m_username;
+    // inConversationWith -> {group, {type, sender, msg, time}}
     QHash<QString, QVector<QPair<bool, std::tuple<QString, QString, QString, QString>>>> m_msgDataBuffer;
     QHash<QString, int> m_msgIndexBegin;
     QHash<QString, bool> m_contactInfos;
@@ -75,8 +82,9 @@ private:
 	QSet<QString> m_contactsInGroups;
     unsigned long m_imgCounter = 0;
     unsigned long m_msgCounter = 0;
+    const unsigned long MAX_UNWRITTEN_MESSAGES = 50;
     int m_imageNum = 0;
-	int m_bytesToRead = 0;
+    int m_bytesToRead = 0;
 };
 
-#endif // CLIENT_H
+#endif
