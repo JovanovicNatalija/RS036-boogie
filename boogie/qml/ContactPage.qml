@@ -68,9 +68,15 @@ Page {
                     text: qsTr("Dodaj novi kontakt")
                     enabled: newContactField.length > 0
                     onClicked: {
-                        Client.checkNewContact(newContactField.text)
-                        newContactField.clear()
-                        msgLabel.visible = false
+                        if(newContactField.text.toString() === Client.username()){
+                            msgLabel.text = "Ne mozete dodati sami sebe"
+                            msgLabel.visible = true
+                            newContactField.clear()
+                        }else {
+                            Client.checkNewContact(newContactField.text)
+                            newContactField.clear()
+                            msgLabel.visible = false
+                        }
                     }
                 }
 
@@ -87,9 +93,15 @@ Page {
                 }
 
                 Keys.onReturnPressed: {
-                    Client.checkNewContact(newContactField.text)
-                    newContactField.clear()
-                    msgLabel.visible = false
+                    if(newContactField.text.toString() === Client.username()){
+                        msgLabel.text = "Ne mozete dodati sami sebe"
+                        msgLabel.visible = true
+                        newContactField.clear()
+                    }else {
+                        Client.checkNewContact(newContactField.text)
+                        newContactField.clear()
+                        msgLabel.visible = false
+                    }
                 }
             }
             RowLayout{
